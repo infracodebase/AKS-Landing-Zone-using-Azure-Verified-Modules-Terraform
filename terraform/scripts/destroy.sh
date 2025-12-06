@@ -109,7 +109,7 @@ main() {
     plan_destruction
 
     # Multiple confirmations for safety
-    log_warn "⚠️  WARNING: You are about to DESTROY the AKS cluster and ALL associated resources ⚠️"
+    log_warn "WARNING: You are about to DESTROY the AKS cluster and ALL associated resources"
     log_warn "This action is IRREVERSIBLE and will DELETE ALL INFRASTRUCTURE"
     echo ""
     read -p "Type 'DESTROY CLUSTER' to confirm: " -r
