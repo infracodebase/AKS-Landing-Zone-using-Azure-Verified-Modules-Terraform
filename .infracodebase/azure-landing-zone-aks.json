@@ -6,8 +6,8 @@
       "label": "Internet",
       "subtitle": "External Traffic",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/public-ip-address.png",
-      "x": 850,
-      "y": 138
+      "x": 855,
+      "y": 155
     },
     {
       "id": "rg-main",
@@ -17,7 +17,7 @@
       "type": "container",
       "x": 470,
       "y": 388,
-      "width": 880,
+      "width": 1091,
       "height": 1922
     },
     {
@@ -28,7 +28,7 @@
       "type": "container",
       "x": 90,
       "y": 90,
-      "width": 700,
+      "width": 710,
       "height": 1492,
       "parentId": "rg-main"
     },
@@ -37,7 +37,7 @@
       "label": "App Gateway Subnet",
       "subtitle": "snet-app-gateway (10.0.3.0/24)",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/subnet.png",
-      "x": 290,
+      "x": 295,
       "y": 90,
       "parentId": "vnet-main"
     },
@@ -48,9 +48,9 @@
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/subnet.png",
       "type": "container",
       "x": 90,
-      "y": 347,
-      "width": 520,
-      "height": 586,
+      "y": 369,
+      "width": 530,
+      "height": 564,
       "parentId": "vnet-main",
       "decorators": [
         {
@@ -65,8 +65,8 @@
       "label": "AKS Cluster",
       "subtitle": "aks-prod-cluster",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/compute/aks.png",
-      "x": 90,
-      "y": 90,
+      "x": 200,
+      "y": 324,
       "parentId": "subnet-aks",
       "decorators": [
         {
@@ -81,7 +81,7 @@
       "label": "System Node Pool",
       "subtitle": "Standard_D4d_v5 (2-5 nodes)",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/compute/aks-node-pool.png",
-      "x": 310,
+      "x": 90,
       "y": 90,
       "parentId": "subnet-aks"
     },
@@ -90,8 +90,8 @@
       "label": "User Node Pool",
       "subtitle": "Standard_D4d_v5 (2-10 nodes)",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/compute/aks-node-pool.png",
-      "x": 310,
-      "y": 346,
+      "x": 320,
+      "y": 90,
       "parentId": "subnet-aks"
     },
     {
@@ -154,8 +154,9 @@
       "label": "Log Analytics",
       "subtitle": "law-aks-prod",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/management/log-analytics-workspace.png",
-      "x": 200,
-      "y": 887
+      "x": 881,
+      "y": 783,
+      "parentId": "rg-main"
     },
     {
       "id": "dns-aks",
@@ -179,7 +180,7 @@
       "subtitle": "privatelink.vaultcore.azure.net",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/dns-zone-(private).png",
       "x": 200,
-      "y": 1137
+      "y": 1160
     }
   ],
   "edges": [
