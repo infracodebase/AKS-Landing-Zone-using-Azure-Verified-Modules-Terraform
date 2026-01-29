@@ -15,9 +15,9 @@
       "subtitle": "rg-aks-prod",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/management/resource-group.png",
       "type": "container",
-      "x": 470,
+      "x": 230,
       "y": 388,
-      "width": 1091,
+      "width": 1331,
       "height": 1922
     },
     {
@@ -26,7 +26,7 @@
       "subtitle": "vnet-aks-prod",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/virtual-network.png",
       "type": "container",
-      "x": 90,
+      "x": 330,
       "y": 90,
       "width": 710,
       "height": 1492,
@@ -136,7 +136,7 @@
       "label": "Container Registry",
       "subtitle": "acrprod001",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/compute/container-registry.png",
-      "x": 270,
+      "x": 510,
       "y": 1682,
       "parentId": "rg-main"
     },
@@ -145,7 +145,7 @@
       "label": "Key Vault",
       "subtitle": "kv-aks-prod",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/security/key-vault.png",
-      "x": 490,
+      "x": 730,
       "y": 1682,
       "parentId": "rg-main"
     },
@@ -154,8 +154,17 @@
       "label": "Log Analytics",
       "subtitle": "law-aks-prod",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/management/log-analytics-workspace.png",
-      "x": 881,
+      "x": 1121,
       "y": 783,
+      "parentId": "rg-main"
+    },
+    {
+      "id": "dns-kv",
+      "label": "Private DNS Zone",
+      "subtitle": "privatelink.vaultcore.azure.net",
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/dns-zone-(private).png",
+      "x": 90,
+      "y": 549,
       "parentId": "rg-main"
     },
     {
@@ -163,24 +172,18 @@
       "label": "Private DNS Zone",
       "subtitle": "privatelink.eastus2.azmk8s.io",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/dns-zone-(private).png",
-      "x": 200,
-      "y": 1391
+      "x": 90,
+      "y": 773,
+      "parentId": "rg-main"
     },
     {
       "id": "dns-acr",
       "label": "Private DNS Zone",
       "subtitle": "privatelink.azurecr.io",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/dns-zone-(private).png",
-      "x": 200,
-      "y": 1648
-    },
-    {
-      "id": "dns-kv",
-      "label": "Private DNS Zone",
-      "subtitle": "privatelink.vaultcore.azure.net",
-      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/dns-zone-(private).png",
-      "x": 200,
-      "y": 1160
+      "x": 90,
+      "y": 1012,
+      "parentId": "rg-main"
     }
   ],
   "edges": [
