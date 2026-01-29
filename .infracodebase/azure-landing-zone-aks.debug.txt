@@ -2151,3 +2151,498 @@ In subnet-pe:
 
 ✓ Saved to 'azure-landing-zone-aks.json' (16 issues to fix)
 ```
+
+============================================================
+[2026-01-29T01:31:44.370Z] modify_diagram
+
+## AGENT REASONING
+Removing illogical circular connections and fixing data flow - private endpoints should facilitate access TO services, not create circular references. Simplifying to show clear AKS → Private Endpoint → Service flow.
+
+## AGENT INPUT
+{
+  "nodes": [],
+  "edges": [
+    {
+      "id": "aks-accesses-acr-via-pe",
+      "source": "aks-cluster",
+      "target": "acr-main"
+    },
+    {
+      "id": "aks-accesses-kv-via-pe",
+      "source": "aks-cluster",
+      "target": "kv-main"
+    },
+    {
+      "id": "pe-acr-provides-access",
+      "source": "pe-acr",
+      "target": "acr-main"
+    },
+    {
+      "id": "pe-kv-provides-access",
+      "source": "pe-kv",
+      "target": "kv-main"
+    }
+  ],
+  "deleteEdgeIds": [
+    "pe-acr-in-subnet",
+    "pe-kv-in-subnet",
+    "aks-to-pe-subnet",
+    "pe-acr-connects-acr",
+    "pe-kv-connects-kv",
+    "pe-acr-connects",
+    "pe-kv-connects",
+    "aks-deployed-in-subnet"
+  ]
+}
+
+## CURRENT STATE
+Nodes (19):
+  internet: rel(250, 540) abs(250, 540) [120x150]
+  rg-main: rel(470, 110) abs(470, 110) [1338x1920]
+  vnet-main: rel(90, 340) abs(560, 450) [800x1490] parent=rg-main
+  subnet-appgw: rel(210, 90) abs(770, 540) [120x150] parent=vnet-main
+  subnet-aks: rel(90, 390) abs(650, 840) [520x580] parent=vnet-main
+  aks-cluster: rel(90, 90) abs(740, 930) [120x150] parent=subnet-aks
+  uami-aks: rel(990, 400) abs(1460, 510) [120x150] parent=rg-main
+  acr-main: rel(890, 90) abs(1360, 200) [120x150] parent=rg-main
+  kv-main: rel(990, 250) abs(1460, 360) [120x150] parent=rg-main
+  law-main: rel(1128, 945) abs(1598, 1055) [120x150] parent=rg-main
+  subnet-pe: rel(190, 1020) abs(750, 1470) [520x380] parent=vnet-main
+  nsg-aks: rel(990, 550) abs(1460, 660) [120x150] parent=rg-main
+  pe-acr: rel(90, 90) abs(840, 1560) [120x150] parent=subnet-pe
+  pe-kv: rel(310, 140) abs(1060, 1610) [120x150] parent=subnet-pe
+  dns-aks: rel(50, 1000) abs(50, 1000) [120x150]
+  dns-acr: rel(250, 1000) abs(250, 1000) [120x150]
+  dns-kv: rel(370, 1000) abs(370, 1000) [120x150]
+  nodepool-system: rel(310, 90) abs(960, 930) [120x150] parent=subnet-aks
+  nodepool-user: rel(310, 340) abs(960, 1180) [120x150] parent=subnet-aks
+
+Edges (24):
+  internet-to-appgw-subnet: internet -> subnet-appgw
+  subnet-appgw-to-aks-subnet: subnet-appgw -> subnet-aks
+  nsg-protects-aks-subnet: nsg-aks -> subnet-aks
+  aks-uses-uami: aks-cluster -> uami-aks
+  aks-pulls-images: aks-cluster -> pe-acr
+  aks-accesses-secrets: aks-cluster -> pe-kv
+  aks-logs-to-law: aks-cluster -> law-main
+  dns-aks-resolves: dns-aks -> aks-cluster
+  dns-acr-resolves: dns-acr -> pe-acr
+  dns-kv-resolves: dns-kv -> pe-kv
+  dns-aks-linked-vnet: dns-aks -> vnet-main
+  dns-acr-linked-vnet: dns-acr -> vnet-main
+  dns-kv-linked-vnet: dns-kv -> vnet-main
+  aks-uses-identity: aks-cluster -> uami-aks
+  nsg-protects-subnet: nsg-aks -> subnet-aks
+  dns-aks-linked: dns-aks -> vnet-main
+  dns-acr-linked: dns-acr -> vnet-main
+  dns-kv-linked: dns-kv -> vnet-main
+  aks-manages-system-pool: aks-cluster -> nodepool-system
+  aks-manages-user-pool: aks-cluster -> nodepool-user
+  aks-accesses-acr-via-pe: aks-cluster -> acr-main
+  aks-accesses-kv-via-pe: aks-cluster -> kv-main
+  pe-acr-provides-access: pe-acr -> acr-main
+  pe-kv-provides-access: pe-kv -> kv-main
+
+## VALIDATION SUMMARY
+Status: 7 errors, 5 warnings
+
+## RESPONSE SENT TO AGENT
+```
+## Diagram Modified: azure-landing-zone-aks.json
+
+**Changes:**
+- Deleted edge 'pe-acr-in-subnet'
+- Deleted edge 'pe-kv-in-subnet'
+- Deleted edge 'aks-to-pe-subnet'
+- Deleted edge 'pe-acr-connects-acr'
+- Deleted edge 'pe-kv-connects-kv'
+- Deleted edge 'pe-acr-connects'
+- Deleted edge 'pe-kv-connects'
+- Deleted edge 'aks-deployed-in-subnet'
+- Created edge 'aks-accesses-acr-via-pe'
+- Created edge 'aks-accesses-kv-via-pe'
+- Created edge 'pe-acr-provides-access'
+- Created edge 'pe-kv-provides-access'
+
+### Current State (19 nodes, 24 edges)
+
+**Root Nodes:**
+- dns-aks: (50, 1000)
+- internet: (250, 540)
+- dns-acr: (250, 1000)
+- dns-kv: (370, 1000)
+- rg-main: (470, 110) [1338x1920]
+
+**Child Nodes (relative → absolute):**
+In rg-main:
+  - vnet-main: (90, 340) → abs (560, 450) [800x1490]
+  - acr-main: (890, 90) → abs (1360, 200)
+  - kv-main: (990, 250) → abs (1460, 360)
+  - uami-aks: (990, 400) → abs (1460, 510)
+  - nsg-aks: (990, 550) → abs (1460, 660)
+  - law-main: (1128, 945) → abs (1598, 1055)
+In vnet-main:
+  - subnet-aks: (90, 390) → abs (650, 840) [520x580]
+  - subnet-pe: (190, 1020) → abs (750, 1470) [520x380]
+  - subnet-appgw: (210, 90) → abs (770, 540)
+In subnet-aks:
+  - aks-cluster: (90, 90) → abs (740, 930)
+  - nodepool-system: (310, 90) → abs (960, 930)
+  - nodepool-user: (310, 340) → abs (960, 1180)
+In subnet-pe:
+  - pe-acr: (90, 90) → abs (840, 1560)
+  - pe-kv: (310, 140) → abs (1060, 1610)
+
+**Edges:**
+- internet-to-appgw-subnet: internet → subnet-appgw "ingress traffic"
+- subnet-appgw-to-aks-subnet: subnet-appgw → subnet-aks "traffic flow"
+- nsg-protects-aks-subnet: nsg-aks → subnet-aks "secures"
+- aks-uses-uami: aks-cluster → uami-aks "uses identity"
+- aks-pulls-images: aks-cluster → pe-acr "pulls images"
+- aks-accesses-secrets: aks-cluster → pe-kv "accesses secrets"
+- aks-logs-to-law: aks-cluster → law-main "sends logs"
+- dns-aks-resolves: dns-aks → aks-cluster "resolves AKS API"
+- dns-acr-resolves: dns-acr → pe-acr "resolves ACR"
+- dns-kv-resolves: dns-kv → pe-kv "resolves Key Vault"
+- dns-aks-linked-vnet: dns-aks → vnet-main "linked to"
+- dns-acr-linked-vnet: dns-acr → vnet-main "linked to"
+- dns-kv-linked-vnet: dns-kv → vnet-main "linked to"
+- aks-uses-identity: aks-cluster → uami-aks "uses identity"
+- nsg-protects-subnet: nsg-aks → subnet-aks "protects"
+- dns-aks-linked: dns-aks → vnet-main "linked to VNet"
+- dns-acr-linked: dns-acr → vnet-main "linked to VNet"
+- dns-kv-linked: dns-kv → vnet-main "linked to VNet"
+- aks-manages-system-pool: aks-cluster → nodepool-system "manages"
+- aks-manages-user-pool: aks-cluster → nodepool-user "manages"
+- aks-accesses-acr-via-pe: aks-cluster → acr-main "pulls images via private endpoint"
+- aks-accesses-kv-via-pe: aks-cluster → kv-main "accesses secrets via private endpoint"
+- pe-acr-provides-access: pe-acr → acr-main "provides private access"
+- pe-kv-provides-access: pe-kv → kv-main "provides private access"
+
+### Errors
+- 'rg-main' overlaps 'dns-kv'. Move 'dns-kv' to x=250 (left of 'rg-main')
+- 'dns-aks' and 'dns-acr' are only 80px apart (need 100px). Move 'dns-acr' to x=270 (+20px right)
+- 'dns-acr' and 'dns-kv' are only 0px apart (need 100px). Move 'dns-kv' to x=470 (+100px right)
+- 'uami-aks' overlaps 'kv-main'. Move 'kv-main' to y=100 (above 'uami-aks')
+- 'uami-aks' overlaps 'nsg-aks'. Move 'nsg-aks' to y=700 (below 'uami-aks')
+- 'acr-main' overlaps 'kv-main'. Move 'kv-main' to x=1110 (right of 'acr-main')
+- 'subnet-aks' and 'subnet-pe' are only 50px apart (need 100px). Move 'subnet-pe' to y=1070 (+50px down)
+
+---
+**7 errors** — fix errors first
+
+**Look at the diagram image above.** Each error message tells you exactly where to move the node. Follow those suggestions to fix all errors in one call.
+
+
+✓ Saved to 'azure-landing-zone-aks.json' (12 issues to fix)
+```
+
+============================================================
+[2026-01-29T01:31:50.979Z] modify_diagram
+
+## AGENT REASONING
+Further cleanup of edge relationships - removing duplicates and unnecessary connections to create a cleaner logical flow
+
+## AGENT INPUT
+{
+  "nodes": [],
+  "edges": [],
+  "deleteEdgeIds": [
+    "aks-pulls-images",
+    "aks-accesses-secrets",
+    "aks-uses-identity"
+  ]
+}
+
+## CURRENT STATE
+Nodes (19):
+  internet: rel(250, 540) abs(250, 540) [120x150]
+  rg-main: rel(470, 110) abs(470, 110) [1338x1920]
+  vnet-main: rel(90, 340) abs(560, 450) [800x1490] parent=rg-main
+  subnet-appgw: rel(210, 90) abs(770, 540) [120x150] parent=vnet-main
+  subnet-aks: rel(90, 390) abs(650, 840) [520x580] parent=vnet-main
+  aks-cluster: rel(90, 90) abs(740, 930) [120x150] parent=subnet-aks
+  uami-aks: rel(990, 400) abs(1460, 510) [120x150] parent=rg-main
+  acr-main: rel(890, 90) abs(1360, 200) [120x150] parent=rg-main
+  kv-main: rel(990, 250) abs(1460, 360) [120x150] parent=rg-main
+  law-main: rel(1128, 945) abs(1598, 1055) [120x150] parent=rg-main
+  subnet-pe: rel(190, 1020) abs(750, 1470) [520x380] parent=vnet-main
+  nsg-aks: rel(990, 550) abs(1460, 660) [120x150] parent=rg-main
+  pe-acr: rel(90, 90) abs(840, 1560) [120x150] parent=subnet-pe
+  pe-kv: rel(310, 140) abs(1060, 1610) [120x150] parent=subnet-pe
+  dns-aks: rel(50, 1000) abs(50, 1000) [120x150]
+  dns-acr: rel(250, 1000) abs(250, 1000) [120x150]
+  dns-kv: rel(370, 1000) abs(370, 1000) [120x150]
+  nodepool-system: rel(310, 90) abs(960, 930) [120x150] parent=subnet-aks
+  nodepool-user: rel(310, 340) abs(960, 1180) [120x150] parent=subnet-aks
+
+Edges (21):
+  internet-to-appgw-subnet: internet -> subnet-appgw
+  subnet-appgw-to-aks-subnet: subnet-appgw -> subnet-aks
+  nsg-protects-aks-subnet: nsg-aks -> subnet-aks
+  aks-uses-uami: aks-cluster -> uami-aks
+  aks-logs-to-law: aks-cluster -> law-main
+  dns-aks-resolves: dns-aks -> aks-cluster
+  dns-acr-resolves: dns-acr -> pe-acr
+  dns-kv-resolves: dns-kv -> pe-kv
+  dns-aks-linked-vnet: dns-aks -> vnet-main
+  dns-acr-linked-vnet: dns-acr -> vnet-main
+  dns-kv-linked-vnet: dns-kv -> vnet-main
+  nsg-protects-subnet: nsg-aks -> subnet-aks
+  dns-aks-linked: dns-aks -> vnet-main
+  dns-acr-linked: dns-acr -> vnet-main
+  dns-kv-linked: dns-kv -> vnet-main
+  aks-manages-system-pool: aks-cluster -> nodepool-system
+  aks-manages-user-pool: aks-cluster -> nodepool-user
+  aks-accesses-acr-via-pe: aks-cluster -> acr-main
+  aks-accesses-kv-via-pe: aks-cluster -> kv-main
+  pe-acr-provides-access: pe-acr -> acr-main
+  pe-kv-provides-access: pe-kv -> kv-main
+
+## VALIDATION SUMMARY
+Status: 7 errors, 4 warnings
+
+## RESPONSE SENT TO AGENT
+```
+## Diagram Modified: azure-landing-zone-aks.json
+
+**Changes:**
+- Deleted edge 'aks-pulls-images'
+- Deleted edge 'aks-accesses-secrets'
+- Deleted edge 'aks-uses-identity'
+
+### Current State (19 nodes, 21 edges)
+
+**Root Nodes:**
+- dns-aks: (50, 1000)
+- internet: (250, 540)
+- dns-acr: (250, 1000)
+- dns-kv: (370, 1000)
+- rg-main: (470, 110) [1338x1920]
+
+**Child Nodes (relative → absolute):**
+In rg-main:
+  - vnet-main: (90, 340) → abs (560, 450) [800x1490]
+  - acr-main: (890, 90) → abs (1360, 200)
+  - kv-main: (990, 250) → abs (1460, 360)
+  - uami-aks: (990, 400) → abs (1460, 510)
+  - nsg-aks: (990, 550) → abs (1460, 660)
+  - law-main: (1128, 945) → abs (1598, 1055)
+In vnet-main:
+  - subnet-aks: (90, 390) → abs (650, 840) [520x580]
+  - subnet-pe: (190, 1020) → abs (750, 1470) [520x380]
+  - subnet-appgw: (210, 90) → abs (770, 540)
+In subnet-aks:
+  - aks-cluster: (90, 90) → abs (740, 930)
+  - nodepool-system: (310, 90) → abs (960, 930)
+  - nodepool-user: (310, 340) → abs (960, 1180)
+In subnet-pe:
+  - pe-acr: (90, 90) → abs (840, 1560)
+  - pe-kv: (310, 140) → abs (1060, 1610)
+
+**Edges:**
+- internet-to-appgw-subnet: internet → subnet-appgw "ingress traffic"
+- subnet-appgw-to-aks-subnet: subnet-appgw → subnet-aks "traffic flow"
+- nsg-protects-aks-subnet: nsg-aks → subnet-aks "secures"
+- aks-uses-uami: aks-cluster → uami-aks "uses identity"
+- aks-logs-to-law: aks-cluster → law-main "sends logs"
+- dns-aks-resolves: dns-aks → aks-cluster "resolves AKS API"
+- dns-acr-resolves: dns-acr → pe-acr "resolves ACR"
+- dns-kv-resolves: dns-kv → pe-kv "resolves Key Vault"
+- dns-aks-linked-vnet: dns-aks → vnet-main "linked to"
+- dns-acr-linked-vnet: dns-acr → vnet-main "linked to"
+- dns-kv-linked-vnet: dns-kv → vnet-main "linked to"
+- nsg-protects-subnet: nsg-aks → subnet-aks "protects"
+- dns-aks-linked: dns-aks → vnet-main "linked to VNet"
+- dns-acr-linked: dns-acr → vnet-main "linked to VNet"
+- dns-kv-linked: dns-kv → vnet-main "linked to VNet"
+- aks-manages-system-pool: aks-cluster → nodepool-system "manages"
+- aks-manages-user-pool: aks-cluster → nodepool-user "manages"
+- aks-accesses-acr-via-pe: aks-cluster → acr-main "pulls images via private endpoint"
+- aks-accesses-kv-via-pe: aks-cluster → kv-main "accesses secrets via private endpoint"
+- pe-acr-provides-access: pe-acr → acr-main "provides private access"
+- pe-kv-provides-access: pe-kv → kv-main "provides private access"
+
+### Errors
+- 'rg-main' overlaps 'dns-kv'. Move 'dns-kv' to x=250 (left of 'rg-main')
+- 'dns-aks' and 'dns-acr' are only 80px apart (need 100px). Move 'dns-acr' to x=270 (+20px right)
+- 'dns-acr' and 'dns-kv' are only 0px apart (need 100px). Move 'dns-kv' to x=470 (+100px right)
+- 'uami-aks' overlaps 'kv-main'. Move 'kv-main' to y=100 (above 'uami-aks')
+- 'uami-aks' overlaps 'nsg-aks'. Move 'nsg-aks' to y=700 (below 'uami-aks')
+- 'acr-main' overlaps 'kv-main'. Move 'kv-main' to x=1110 (right of 'acr-main')
+- 'subnet-aks' and 'subnet-pe' are only 50px apart (need 100px). Move 'subnet-pe' to y=1070 (+50px down)
+
+---
+**7 errors** — fix errors first
+
+**Look at the diagram image above.** Each error message tells you exactly where to move the node. Follow those suggestions to fix all errors in one call.
+
+
+✓ Saved to 'azure-landing-zone-aks.json' (11 issues to fix)
+```
+
+============================================================
+[2026-01-29T01:31:59.110Z] modify_diagram
+
+## AGENT REASONING
+Final cleanup of spacing errors to complete the Azure Landing Zone AKS diagram
+
+## AGENT INPUT
+{
+  "nodes": [
+    {
+      "id": "dns-kv",
+      "x": 100,
+      "y": 1000
+    },
+    {
+      "id": "dns-acr",
+      "x": 270,
+      "y": 1000
+    },
+    {
+      "id": "kv-main",
+      "x": 1110,
+      "y": 100
+    },
+    {
+      "id": "nsg-aks",
+      "x": 890,
+      "y": 700
+    },
+    {
+      "id": "subnet-pe",
+      "x": 190,
+      "y": 1070
+    }
+  ],
+  "edges": []
+}
+
+## CURRENT STATE
+Nodes (19):
+  internet: rel(250, 540) abs(250, 540) [120x150]
+  rg-main: rel(470, 110) abs(470, 110) [1338x1920]
+  vnet-main: rel(90, 340) abs(560, 450) [800x1490] parent=rg-main
+  subnet-appgw: rel(210, 90) abs(770, 540) [120x150] parent=vnet-main
+  subnet-aks: rel(90, 390) abs(650, 840) [520x580] parent=vnet-main
+  aks-cluster: rel(90, 90) abs(740, 930) [120x150] parent=subnet-aks
+  uami-aks: rel(990, 400) abs(1460, 510) [120x150] parent=rg-main
+  acr-main: rel(890, 90) abs(1360, 200) [120x150] parent=rg-main
+  kv-main: rel(1110, 100) abs(1580, 210) [120x150] parent=rg-main
+  law-main: rel(1128, 945) abs(1598, 1055) [120x150] parent=rg-main
+  subnet-pe: rel(190, 1070) abs(750, 1520) [520x330] parent=vnet-main
+  nsg-aks: rel(890, 700) abs(1360, 810) [120x150] parent=rg-main
+  pe-acr: rel(90, 90) abs(840, 1610) [120x150] parent=subnet-pe
+  pe-kv: rel(310, 90) abs(1060, 1610) [120x150] parent=subnet-pe
+  dns-aks: rel(50, 1000) abs(50, 1000) [120x150]
+  dns-acr: rel(270, 1000) abs(270, 1000) [120x150]
+  dns-kv: rel(100, 1000) abs(100, 1000) [120x150]
+  nodepool-system: rel(310, 90) abs(960, 930) [120x150] parent=subnet-aks
+  nodepool-user: rel(310, 340) abs(960, 1180) [120x150] parent=subnet-aks
+
+Edges (21):
+  internet-to-appgw-subnet: internet -> subnet-appgw
+  subnet-appgw-to-aks-subnet: subnet-appgw -> subnet-aks
+  nsg-protects-aks-subnet: nsg-aks -> subnet-aks
+  aks-uses-uami: aks-cluster -> uami-aks
+  aks-logs-to-law: aks-cluster -> law-main
+  dns-aks-resolves: dns-aks -> aks-cluster
+  dns-acr-resolves: dns-acr -> pe-acr
+  dns-kv-resolves: dns-kv -> pe-kv
+  dns-aks-linked-vnet: dns-aks -> vnet-main
+  dns-acr-linked-vnet: dns-acr -> vnet-main
+  dns-kv-linked-vnet: dns-kv -> vnet-main
+  nsg-protects-subnet: nsg-aks -> subnet-aks
+  dns-aks-linked: dns-aks -> vnet-main
+  dns-acr-linked: dns-acr -> vnet-main
+  dns-kv-linked: dns-kv -> vnet-main
+  aks-manages-system-pool: aks-cluster -> nodepool-system
+  aks-manages-user-pool: aks-cluster -> nodepool-user
+  aks-accesses-acr-via-pe: aks-cluster -> acr-main
+  aks-accesses-kv-via-pe: aks-cluster -> kv-main
+  pe-acr-provides-access: pe-acr -> acr-main
+  pe-kv-provides-access: pe-kv -> kv-main
+
+## VALIDATION SUMMARY
+Status: 4 errors, 4 warnings
+
+## RESPONSE SENT TO AGENT
+```
+## Diagram Modified: azure-landing-zone-aks.json
+
+**Changes:**
+- Updated node 'dns-kv'
+- Updated node 'dns-acr'
+- Updated node 'kv-main'
+- Updated node 'nsg-aks'
+- Updated node 'subnet-pe'
+- Auto-resized containers: vnet-main, rg-main
+- **Alignment check needed**: Container resize may have shifted internal nodes. Verify alignment with external nodes: 'internet', 'dns-aks', 'dns-acr', 'dns-kv'
+
+### Current State (19 nodes, 21 edges)
+
+**Root Nodes:**
+- dns-aks: (50, 1000)
+- dns-kv: (100, 1000)
+- internet: (250, 540)
+- dns-acr: (270, 1000)
+- rg-main: (470, 110) [1338x1920]
+
+**Child Nodes (relative → absolute):**
+In rg-main:
+  - vnet-main: (90, 340) → abs (560, 450) [800x1490]
+  - acr-main: (890, 90) → abs (1360, 200)
+  - nsg-aks: (890, 700) → abs (1360, 810)
+  - uami-aks: (990, 400) → abs (1460, 510)
+  - kv-main: (1110, 100) → abs (1580, 210)
+  - law-main: (1128, 945) → abs (1598, 1055)
+In vnet-main:
+  - subnet-aks: (90, 390) → abs (650, 840) [520x580]
+  - subnet-pe: (190, 1070) → abs (750, 1520) [520x330]
+  - subnet-appgw: (210, 90) → abs (770, 540)
+In subnet-aks:
+  - aks-cluster: (90, 90) → abs (740, 930)
+  - nodepool-system: (310, 90) → abs (960, 930)
+  - nodepool-user: (310, 340) → abs (960, 1180)
+In subnet-pe:
+  - pe-acr: (90, 90) → abs (840, 1610)
+  - pe-kv: (310, 90) → abs (1060, 1610)
+
+**Edges:**
+- internet-to-appgw-subnet: internet → subnet-appgw "ingress traffic"
+- subnet-appgw-to-aks-subnet: subnet-appgw → subnet-aks "traffic flow"
+- nsg-protects-aks-subnet: nsg-aks → subnet-aks "secures"
+- aks-uses-uami: aks-cluster → uami-aks "uses identity"
+- aks-logs-to-law: aks-cluster → law-main "sends logs"
+- dns-aks-resolves: dns-aks → aks-cluster "resolves AKS API"
+- dns-acr-resolves: dns-acr → pe-acr "resolves ACR"
+- dns-kv-resolves: dns-kv → pe-kv "resolves Key Vault"
+- dns-aks-linked-vnet: dns-aks → vnet-main "linked to"
+- dns-acr-linked-vnet: dns-acr → vnet-main "linked to"
+- dns-kv-linked-vnet: dns-kv → vnet-main "linked to"
+- nsg-protects-subnet: nsg-aks → subnet-aks "protects"
+- dns-aks-linked: dns-aks → vnet-main "linked to VNet"
+- dns-acr-linked: dns-acr → vnet-main "linked to VNet"
+- dns-kv-linked: dns-kv → vnet-main "linked to VNet"
+- aks-manages-system-pool: aks-cluster → nodepool-system "manages"
+- aks-manages-user-pool: aks-cluster → nodepool-user "manages"
+- aks-accesses-acr-via-pe: aks-cluster → acr-main "pulls images via private endpoint"
+- aks-accesses-kv-via-pe: aks-cluster → kv-main "accesses secrets via private endpoint"
+- pe-acr-provides-access: pe-acr → acr-main "provides private access"
+- pe-kv-provides-access: pe-kv → kv-main "provides private access"
+
+### Errors
+- 'rg-main' and 'dns-acr' are only 80px apart (need 100px). Move 'dns-acr' to x=250 (+20px left)
+- 'dns-aks' overlaps 'dns-kv'. Move 'dns-kv' to x=270 (right of 'dns-aks')
+- 'dns-acr' and 'dns-kv' are only 50px apart (need 100px). Move 'dns-kv' to x=50 (+50px left)
+- 'vnet-main' and 'nsg-aks' are only 0px apart (need 100px). Move 'nsg-aks' to x=990 (+100px right)
+
+---
+**4 errors** — fix errors first
+
+**Look at the diagram image above.** Each error message tells you exactly where to move the node. Follow those suggestions to fix all errors in one call.
+
+
+✓ Saved to 'azure-landing-zone-aks.json' (8 issues to fix)
+```
