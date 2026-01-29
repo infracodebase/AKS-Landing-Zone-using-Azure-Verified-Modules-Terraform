@@ -142,16 +142,16 @@
       "label": "Private DNS Zone",
       "subtitle": "privatelink.eastus2.azmk8s.io",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/dns-zone-(private).png",
-      "x": 50,
-      "y": 1000
+      "x": 200,
+      "y": 1136
     },
     {
       "id": "dns-acr",
       "label": "Private DNS Zone",
       "subtitle": "privatelink.azurecr.io",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/dns-zone-(private).png",
-      "x": 250,
-      "y": 1000
+      "x": 200,
+      "y": 1397
     },
     {
       "id": "dns-kv",
@@ -212,64 +212,10 @@
       "label": "sends logs"
     },
     {
-      "id": "dns-aks-resolves",
-      "source": "dns-aks",
-      "target": "aks-cluster",
-      "label": "resolves AKS API"
-    },
-    {
-      "id": "dns-acr-resolves",
-      "source": "dns-acr",
-      "target": "pe-acr",
-      "label": "resolves ACR"
-    },
-    {
-      "id": "dns-kv-resolves",
-      "source": "dns-kv",
-      "target": "pe-kv",
-      "label": "resolves Key Vault"
-    },
-    {
-      "id": "dns-aks-linked-vnet",
-      "source": "dns-aks",
-      "target": "vnet-main",
-      "label": "linked to"
-    },
-    {
-      "id": "dns-acr-linked-vnet",
-      "source": "dns-acr",
-      "target": "vnet-main",
-      "label": "linked to"
-    },
-    {
-      "id": "dns-kv-linked-vnet",
-      "source": "dns-kv",
-      "target": "vnet-main",
-      "label": "linked to"
-    },
-    {
       "id": "nsg-protects-subnet",
       "source": "nsg-aks",
       "target": "subnet-aks",
       "label": "protects"
-    },
-    {
-      "id": "dns-aks-linked",
-      "source": "dns-aks",
-      "target": "vnet-main",
-      "label": "linked to VNet"
-    },
-    {
-      "id": "dns-acr-linked",
-      "source": "dns-acr",
-      "target": "vnet-main",
-      "label": "linked to VNet"
-    },
-    {
-      "id": "dns-kv-linked",
-      "source": "dns-kv",
-      "target": "vnet-main",
-      "label": "linked to VNet"
     },
     {
       "id": "aks-manages-system-pool",
@@ -306,6 +252,27 @@
       "source": "pe-kv",
       "target": "kv-main",
       "label": "provides private access"
+    },
+    {
+      "id": "vnet-uses-aks-dns",
+      "source": "vnet-main",
+      "target": "dns-aks",
+      "label": "uses for AKS API resolution",
+      "style": "dashed"
+    },
+    {
+      "id": "vnet-uses-acr-dns",
+      "source": "vnet-main",
+      "target": "dns-acr",
+      "label": "uses for ACR resolution",
+      "style": "dashed"
+    },
+    {
+      "id": "vnet-uses-kv-dns",
+      "source": "vnet-main",
+      "target": "dns-kv",
+      "label": "uses for Key Vault resolution",
+      "style": "dashed"
     }
   ],
   "legend": {
