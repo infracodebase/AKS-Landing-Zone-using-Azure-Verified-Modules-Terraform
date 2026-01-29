@@ -12,13 +12,13 @@
     {
       "id": "rg-main",
       "label": "Resource Group",
+      "x": 470,
+      "y": 388,
       "subtitle": "rg-aks-prod",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/management/resource-group.png",
       "type": "container",
-      "x": 470,
-      "y": 360,
-      "width": 1200,
-      "height": 1922
+      "width": 880,
+      "height": 1972
     },
     {
       "id": "vnet-main",
@@ -51,7 +51,14 @@
       "y": 347,
       "width": 520,
       "height": 623,
-      "parentId": "vnet-main"
+      "parentId": "vnet-main",
+      "decorators": [
+        {
+          "icon": "/icons/azure/networking/network-security-group.png",
+          "position": "bottom-right",
+          "tooltip": "Network Security Group"
+        }
+      ]
     },
     {
       "id": "aks-cluster",
@@ -97,7 +104,14 @@
       "y": 1072,
       "width": 520,
       "height": 330,
-      "parentId": "vnet-main"
+      "parentId": "vnet-main",
+      "decorators": [
+        {
+          "icon": "/icons/azure/networking/network-security-group.png",
+          "position": "bottom-right",
+          "tooltip": "Network Security Group"
+        }
+      ]
     },
     {
       "id": "pe-acr",
@@ -120,28 +134,19 @@
     {
       "id": "acr-main",
       "label": "Container Registry",
-      "x": 270,
-      "y": 1682,
       "subtitle": "acrprod001",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/compute/container-registry.png",
+      "x": 270,
+      "y": 1682,
       "parentId": "rg-main"
     },
     {
       "id": "kv-main",
       "label": "Key Vault",
-      "x": 490,
-      "y": 1682,
       "subtitle": "kv-aks-prod",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/security/key-vault.png",
-      "parentId": "rg-main"
-    },
-    {
-      "id": "nsg-aks",
-      "label": "Network Security Group",
-      "subtitle": "nsg-aks-prod",
-      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/network-security-group.png",
-      "x": 990,
-      "y": 491,
+      "x": 490,
+      "y": 1682,
       "parentId": "rg-main"
     },
     {
@@ -171,10 +176,10 @@
     {
       "id": "dns-kv",
       "label": "Private DNS Zone",
-      "subtitle": "privatelink.vaultcore.azure.net",
-      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/dns-zone-(private).png",
       "x": 200,
-      "y": 1136
+      "y": 1137,
+      "subtitle": "privatelink.vaultcore.azure.net",
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/dns-zone-(private).png"
     }
   ],
   "edges": [
@@ -191,22 +196,10 @@
       "label": "traffic flow"
     },
     {
-      "id": "nsg-protects-aks-subnet",
-      "source": "nsg-aks",
-      "target": "subnet-aks",
-      "label": "secures"
-    },
-    {
       "id": "aks-logs-to-law",
       "source": "aks-cluster",
       "target": "law-main",
       "label": "sends logs"
-    },
-    {
-      "id": "nsg-protects-subnet",
-      "source": "nsg-aks",
-      "target": "subnet-aks",
-      "label": "protects"
     },
     {
       "id": "aks-manages-system-pool",
