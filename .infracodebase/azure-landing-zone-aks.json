@@ -12,13 +12,13 @@
     {
       "id": "rg-main",
       "label": "Resource Group",
-      "x": 470,
-      "y": 388,
       "subtitle": "rg-aks-prod",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/management/resource-group.png",
       "type": "container",
+      "x": 470,
+      "y": 388,
       "width": 880,
-      "height": 1972
+      "height": 1922
     },
     {
       "id": "vnet-main",
@@ -50,11 +50,11 @@
       "x": 90,
       "y": 347,
       "width": 520,
-      "height": 623,
+      "height": 586,
       "parentId": "vnet-main",
       "decorators": [
         {
-          "icon": "/icons/azure/networking/network-security-group.png",
+          "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/network-security-group.png",
           "position": "bottom-right",
           "tooltip": "Network Security Group"
         }
@@ -91,7 +91,7 @@
       "subtitle": "Standard_D4d_v5 (2-10 nodes)",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/compute/aks-node-pool.png",
       "x": 310,
-      "y": 383,
+      "y": 346,
       "parentId": "subnet-aks"
     },
     {
@@ -107,7 +107,7 @@
       "parentId": "vnet-main",
       "decorators": [
         {
-          "icon": "/icons/azure/networking/network-security-group.png",
+          "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/network-security-group.png",
           "position": "bottom-right",
           "tooltip": "Network Security Group"
         }
@@ -176,10 +176,10 @@
     {
       "id": "dns-kv",
       "label": "Private DNS Zone",
-      "x": 200,
-      "y": 1137,
       "subtitle": "privatelink.vaultcore.azure.net",
-      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/dns-zone-(private).png"
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/dns-zone-(private).png",
+      "x": 200,
+      "y": 1137
     }
   ],
   "edges": [
@@ -214,18 +214,6 @@
       "label": "manages"
     },
     {
-      "id": "aks-accesses-acr-via-pe",
-      "source": "aks-cluster",
-      "target": "acr-main",
-      "label": "pulls images via private endpoint"
-    },
-    {
-      "id": "aks-accesses-kv-via-pe",
-      "source": "aks-cluster",
-      "target": "kv-main",
-      "label": "accesses secrets via private endpoint"
-    },
-    {
       "id": "pe-acr-provides-access",
       "source": "pe-acr",
       "target": "acr-main",
@@ -257,6 +245,18 @@
       "target": "dns-kv",
       "label": "uses for Key Vault resolution",
       "style": "dashed"
+    },
+    {
+      "id": "aks-pulls-images-via-pe",
+      "source": "aks-cluster",
+      "target": "pe-acr",
+      "label": "pulls images"
+    },
+    {
+      "id": "aks-accesses-secrets-via-pe",
+      "source": "aks-cluster",
+      "target": "pe-kv",
+      "label": "accesses secrets"
     }
   ],
   "legend": {

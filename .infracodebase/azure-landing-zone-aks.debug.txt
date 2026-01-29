@@ -493,3 +493,125 @@ In subnet-pe:
 
 ✓ Saved to 'azure-landing-zone-aks.json' - layout complete!
 ```
+
+============================================================
+[2026-01-29T01:35:47.949Z] modify_diagram
+
+## AGENT REASONING
+Fixing the network flow - AKS should communicate with ACR and Key Vault through their private endpoints, not directly to the services
+
+## AGENT INPUT
+{
+  "nodes": [],
+  "edges": [
+    {
+      "id": "aks-pulls-images-via-pe",
+      "source": "aks-cluster",
+      "target": "pe-acr"
+    },
+    {
+      "id": "aks-accesses-secrets-via-pe",
+      "source": "aks-cluster",
+      "target": "pe-kv"
+    }
+  ],
+  "deleteEdgeIds": [
+    "aks-accesses-acr-via-pe",
+    "aks-accesses-kv-via-pe"
+  ]
+}
+
+## CURRENT STATE
+Nodes (17):
+  internet: rel(850, 138) abs(850, 138) [120x150]
+  rg-main: rel(470, 388) abs(470, 388) [880x1972]
+  vnet-main: rel(90, 90) abs(560, 478) [700x1492] parent=rg-main
+  subnet-appgw: rel(290, 90) abs(850, 568) [120x150] parent=vnet-main
+  subnet-aks: rel(90, 347) abs(650, 825) [520x623] parent=vnet-main
+  aks-cluster: rel(90, 90) abs(740, 915) [120x150] parent=subnet-aks
+  nodepool-system: rel(310, 90) abs(960, 915) [120x150] parent=subnet-aks
+  nodepool-user: rel(310, 383) abs(960, 1208) [120x150] parent=subnet-aks
+  subnet-pe: rel(90, 1072) abs(650, 1550) [520x330] parent=vnet-main
+  pe-acr: rel(90, 90) abs(740, 1640) [120x150] parent=subnet-pe
+  pe-kv: rel(310, 90) abs(960, 1640) [120x150] parent=subnet-pe
+  acr-main: rel(270, 1682) abs(740, 2070) [120x150] parent=rg-main
+  kv-main: rel(490, 1682) abs(960, 2070) [120x150] parent=rg-main
+  law-main: rel(200, 887) abs(200, 887) [120x150]
+  dns-aks: rel(200, 1391) abs(200, 1391) [120x150]
+  dns-acr: rel(200, 1648) abs(200, 1648) [120x150]
+  dns-kv: rel(200, 1137) abs(200, 1137) [120x150]
+
+Edges (12):
+  internet-to-appgw-subnet: internet -> subnet-appgw
+  subnet-appgw-to-aks-subnet: subnet-appgw -> subnet-aks
+  aks-logs-to-law: aks-cluster -> law-main
+  aks-manages-system-pool: aks-cluster -> nodepool-system
+  aks-manages-user-pool: aks-cluster -> nodepool-user
+  pe-acr-provides-access: pe-acr -> acr-main
+  pe-kv-provides-access: pe-kv -> kv-main
+  vnet-uses-aks-dns: vnet-main -> dns-aks
+  vnet-uses-acr-dns: vnet-main -> dns-acr
+  vnet-uses-kv-dns: vnet-main -> dns-kv
+  aks-pulls-images-via-pe: aks-cluster -> pe-acr
+  aks-accesses-secrets-via-pe: aks-cluster -> pe-kv
+
+## VALIDATION SUMMARY
+Status: 0 errors, 0 warnings
+
+## RESPONSE SENT TO AGENT
+```
+## Diagram Modified: azure-landing-zone-aks.json
+
+**Changes:**
+- Deleted edge 'aks-accesses-acr-via-pe'
+- Deleted edge 'aks-accesses-kv-via-pe'
+- Created edge 'aks-pulls-images-via-pe'
+- Created edge 'aks-accesses-secrets-via-pe'
+
+### Current State (17 nodes, 12 edges)
+
+**Root Nodes:**
+- law-main: (200, 887)
+- dns-kv: (200, 1137)
+- dns-aks: (200, 1391)
+- dns-acr: (200, 1648)
+- rg-main: (470, 388) [880x1972]
+- internet: (850, 138)
+
+**Child Nodes (relative → absolute):**
+In rg-main:
+  - vnet-main: (90, 90) → abs (560, 478) [700x1492]
+  - acr-main: (270, 1682) → abs (740, 2070)
+  - kv-main: (490, 1682) → abs (960, 2070)
+In vnet-main:
+  - subnet-aks: (90, 347) → abs (650, 825) [520x623]
+  - subnet-pe: (90, 1072) → abs (650, 1550) [520x330]
+  - subnet-appgw: (290, 90) → abs (850, 568)
+In subnet-aks:
+  - aks-cluster: (90, 90) → abs (740, 915)
+  - nodepool-system: (310, 90) → abs (960, 915)
+  - nodepool-user: (310, 383) → abs (960, 1208)
+In subnet-pe:
+  - pe-acr: (90, 90) → abs (740, 1640)
+  - pe-kv: (310, 90) → abs (960, 1640)
+
+**Edges:**
+- internet-to-appgw-subnet: internet → subnet-appgw "ingress traffic"
+- subnet-appgw-to-aks-subnet: subnet-appgw → subnet-aks "traffic flow"
+- aks-logs-to-law: aks-cluster → law-main "sends logs"
+- aks-manages-system-pool: aks-cluster → nodepool-system "manages"
+- aks-manages-user-pool: aks-cluster → nodepool-user "manages"
+- pe-acr-provides-access: pe-acr → acr-main "provides private access"
+- pe-kv-provides-access: pe-kv → kv-main "provides private access"
+- vnet-uses-aks-dns: vnet-main → dns-aks "uses for AKS API resolution"
+- vnet-uses-acr-dns: vnet-main → dns-acr "uses for ACR resolution"
+- vnet-uses-kv-dns: vnet-main → dns-kv "uses for Key Vault resolution"
+- aks-pulls-images-via-pe: aks-cluster → pe-acr "pulls images"
+- aks-accesses-secrets-via-pe: aks-cluster → pe-kv "accesses secrets"
+
+---
+**Layout valid** — no errors
+
+
+✓ Saved to 'azure-landing-zone-aks.json' - layout complete!
+```
