@@ -6,8 +6,8 @@
       "label": "Internet",
       "subtitle": "External Traffic",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/public-ip-address.png",
-      "x": 250,
-      "y": 540
+      "x": 850,
+      "y": 138
     },
     {
       "id": "rg-main",
@@ -17,8 +17,8 @@
       "type": "container",
       "x": 470,
       "y": 360,
-      "width": 1338,
-      "height": 1877
+      "width": 1200,
+      "height": 1922
     },
     {
       "id": "vnet-main",
@@ -37,7 +37,7 @@
       "label": "App Gateway Subnet",
       "subtitle": "snet-app-gateway (10.0.3.0/24)",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/subnet.png",
-      "x": 210,
+      "x": 290,
       "y": 90,
       "parentId": "vnet-main"
     },
@@ -48,55 +48,44 @@
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/subnet.png",
       "type": "container",
       "x": 90,
-      "y": 390,
+      "y": 347,
       "width": 520,
-      "height": 580,
+      "height": 623,
       "parentId": "vnet-main"
     },
     {
       "id": "aks-cluster",
       "label": "AKS Cluster",
       "subtitle": "aks-prod-cluster",
-      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/compute/kubernetes-service-and-ingres.png",
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/compute/aks.png",
       "x": 90,
+      "y": 90,
+      "parentId": "subnet-aks",
+      "decorators": [
+        {
+          "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/identity/managed-identity.png",
+          "position": "bottom-right",
+          "tooltip": "User Assigned Managed Identity"
+        }
+      ]
+    },
+    {
+      "id": "nodepool-system",
+      "label": "System Node Pool",
+      "subtitle": "Standard_D4d_v5 (2-5 nodes)",
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/compute/aks-node-pool.png",
+      "x": 310,
       "y": 90,
       "parentId": "subnet-aks"
     },
     {
-      "id": "uami-aks",
-      "label": "User Assigned Identity",
-      "subtitle": "id-aks-prod",
-      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/identity/managed-identity.png",
-      "x": 990,
-      "y": 150,
-      "parentId": "rg-main"
-    },
-    {
-      "id": "acr-main",
-      "label": "Container Registry",
-      "subtitle": "acrprod001",
-      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/compute/container-registry.png",
-      "x": 270,
-      "y": 1637,
-      "parentId": "rg-main"
-    },
-    {
-      "id": "kv-main",
-      "label": "Key Vault",
-      "subtitle": "kv-aks-prod",
-      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/security/key-vault.png",
-      "x": 490,
-      "y": 1637,
-      "parentId": "rg-main"
-    },
-    {
-      "id": "law-main",
-      "label": "Log Analytics",
-      "subtitle": "law-aks-prod",
-      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/management/log-analytics-workspace.png",
-      "x": 1128,
-      "y": 695,
-      "parentId": "rg-main"
+      "id": "nodepool-user",
+      "label": "User Node Pool",
+      "subtitle": "Standard_D4d_v5 (2-10 nodes)",
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/compute/aks-node-pool.png",
+      "x": 310,
+      "y": 383,
+      "parentId": "subnet-aks"
     },
     {
       "id": "subnet-pe",
@@ -109,15 +98,6 @@
       "width": 520,
       "height": 330,
       "parentId": "vnet-main"
-    },
-    {
-      "id": "nsg-aks",
-      "label": "Network Security Group",
-      "subtitle": "nsg-aks-prod",
-      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/network-security-group.png",
-      "x": 990,
-      "y": 300,
-      "parentId": "rg-main"
     },
     {
       "id": "pe-acr",
@@ -138,12 +118,47 @@
       "parentId": "subnet-pe"
     },
     {
+      "id": "acr-main",
+      "label": "Container Registry",
+      "x": 270,
+      "y": 1682,
+      "subtitle": "acrprod001",
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/compute/container-registry.png",
+      "parentId": "rg-main"
+    },
+    {
+      "id": "kv-main",
+      "label": "Key Vault",
+      "x": 490,
+      "y": 1682,
+      "subtitle": "kv-aks-prod",
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/security/key-vault.png",
+      "parentId": "rg-main"
+    },
+    {
+      "id": "nsg-aks",
+      "label": "Network Security Group",
+      "subtitle": "nsg-aks-prod",
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/network-security-group.png",
+      "x": 990,
+      "y": 491,
+      "parentId": "rg-main"
+    },
+    {
+      "id": "law-main",
+      "label": "Log Analytics",
+      "subtitle": "law-aks-prod",
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/management/log-analytics-workspace.png",
+      "x": 200,
+      "y": 887
+    },
+    {
       "id": "dns-aks",
       "label": "Private DNS Zone",
       "subtitle": "privatelink.eastus2.azmk8s.io",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/dns-zone-(private).png",
       "x": 200,
-      "y": 1136
+      "y": 1391
     },
     {
       "id": "dns-acr",
@@ -151,33 +166,15 @@
       "subtitle": "privatelink.azurecr.io",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/dns-zone-(private).png",
       "x": 200,
-      "y": 1397
+      "y": 1648
     },
     {
       "id": "dns-kv",
       "label": "Private DNS Zone",
       "subtitle": "privatelink.vaultcore.azure.net",
       "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/dns-zone-(private).png",
-      "x": 370,
-      "y": 1000
-    },
-    {
-      "id": "nodepool-system",
-      "label": "System Node Pool",
-      "subtitle": "Standard_D4d_v5 (2-5 nodes)",
-      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/compute/aks-node-pool.png",
-      "x": 310,
-      "y": 90,
-      "parentId": "subnet-aks"
-    },
-    {
-      "id": "nodepool-user",
-      "label": "User Node Pool",
-      "subtitle": "Standard_D4d_v5 (2-10 nodes)",
-      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/compute/aks-node-pool.png",
-      "x": 310,
-      "y": 340,
-      "parentId": "subnet-aks"
+      "x": 200,
+      "y": 1136
     }
   ],
   "edges": [
@@ -198,12 +195,6 @@
       "source": "nsg-aks",
       "target": "subnet-aks",
       "label": "secures"
-    },
-    {
-      "id": "aks-uses-uami",
-      "source": "aks-cluster",
-      "target": "uami-aks",
-      "label": "uses identity"
     },
     {
       "id": "aks-logs-to-law",
