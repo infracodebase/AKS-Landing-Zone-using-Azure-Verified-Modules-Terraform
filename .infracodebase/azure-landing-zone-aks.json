@@ -3,104 +3,146 @@
     {
       "id": "internet",
       "label": "Internet",
+      "x": 0,
+      "y": 0,
       "subtitle": "External Traffic",
-      "icon": "/icons/azure/networking/public-ip-address.png"
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/public-ip-address.png"
     },
     {
       "id": "rg-main",
       "label": "Resource Group",
+      "x": 530,
+      "y": 309,
       "subtitle": "rg-mycompany-aks-prod",
-      "icon": "/icons/azure/management/resource-group.png"
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/management/resource-group.png",
+      "width": 480,
+      "height": 510,
+      "type": "container"
     },
     {
       "id": "vnet-main",
       "label": "Virtual Network",
+      "x": 90,
+      "y": 90,
       "subtitle": "vnet-aks-mycompany-prod (10.0.0.0/16)",
-      "icon": "/icons/azure/networking/virtual-network.png"
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/virtual-network.png",
+      "parentId": "rg-main",
+      "width": 300,
+      "height": 330,
+      "type": "container"
     },
     {
       "id": "subnet-appgw",
       "label": "Subnet",
+      "x": 90,
+      "y": 90,
       "subtitle": "snet-app-gateway (10.0.3.0/24)",
-      "icon": "/icons/azure/networking/subnet.png"
-    },
-    {
-      "id": "subnet-aks",
-      "label": "Subnet",
-      "subtitle": "snet-aks (10.0.1.0/24)",
-      "icon": "/icons/azure/networking/subnet.png"
-    },
-    {
-      "id": "subnet-pe",
-      "label": "Subnet",
-      "subtitle": "snet-private-link (10.0.2.0/24)",
-      "icon": "/icons/azure/networking/subnet.png"
-    },
-    {
-      "id": "nsg-aks",
-      "label": "Network Security Group",
-      "subtitle": "nsg-aks-mycompany-prod-aks",
-      "icon": "/icons/azure/networking/network-security-group.png"
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/subnet.png",
+      "parentId": "vnet-main"
     },
     {
       "id": "aks-cluster",
       "label": "AKS Cluster",
+      "x": 885,
+      "y": 855,
       "subtitle": "aks-mycompany-prod (Private)",
-      "icon": "/icons/azure/compute/container-kubernetes-service.png"
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/compute/container-kubernetes-service.png"
     },
     {
       "id": "uami-aks",
       "label": "User Assigned Identity",
+      "x": 1100,
+      "y": 680,
       "subtitle": "id-aks-mycompany-prod-aks",
-      "icon": "/icons/azure/identity/managed-identity.png"
-    },
-    {
-      "id": "pe-acr",
-      "label": "Private Endpoint",
-      "subtitle": "pe-acraksproduction",
-      "icon": "/icons/azure/networking/private-endpoint.png"
-    },
-    {
-      "id": "pe-kv",
-      "label": "Private Endpoint",
-      "subtitle": "pe-kv-aks-mycompany-prod",
-      "icon": "/icons/azure/networking/private-endpoint.png"
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/identity/managed-identity.png"
     },
     {
       "id": "acr-main",
       "label": "Container Registry",
+      "x": 885,
+      "y": -150,
       "subtitle": "acraksproduction (Private)",
-      "icon": "/icons/azure/compute/container-registry.png"
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/compute/container-registry.png"
     },
     {
       "id": "kv-main",
       "label": "Key Vault",
+      "x": 1282,
+      "y": 489,
       "subtitle": "kv-aks-mycompany-prod",
-      "icon": "/icons/azure/security/key-vault.png"
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/security/key-vault.png"
     },
     {
       "id": "law-main",
       "label": "Log Analytics Workspace",
+      "x": 1191,
+      "y": 195,
       "subtitle": "law-aks-mycompany-prod",
-      "icon": "/icons/azure/management/log-analytics-solution.png"
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/management/log-analytics-solution.png"
+    },
+    {
+      "id": "subnet-aks",
+      "label": "Subnet",
+      "x": 980,
+      "y": 70,
+      "subtitle": "snet-aks (10.0.1.0/24)",
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/subnet.png"
+    },
+    {
+      "id": "subnet-pe",
+      "label": "Subnet",
+      "x": 630,
+      "y": 0,
+      "subtitle": "snet-private-link (10.0.2.0/24)",
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/subnet.png"
+    },
+    {
+      "id": "nsg-aks",
+      "label": "Network Security Group",
+      "x": 0,
+      "y": 250,
+      "subtitle": "nsg-aks-mycompany-prod-aks",
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/network-security-group.png"
+    },
+    {
+      "id": "pe-acr",
+      "label": "Private Endpoint",
+      "x": 180,
+      "y": 0,
+      "subtitle": "pe-acraksproduction",
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/private-endpoint.png"
+    },
+    {
+      "id": "pe-kv",
+      "label": "Private Endpoint",
+      "x": 180,
+      "y": 250,
+      "subtitle": "pe-kv-aks-mycompany-prod",
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/private-endpoint.png"
     },
     {
       "id": "dns-aks",
       "label": "Private DNS Zone",
+      "x": 0,
+      "y": 500,
       "subtitle": "privatelink.eastus2.azmk8s.io",
-      "icon": "/icons/azure/networking/dns-zone-(private).png"
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/dns-zone-(private).png"
     },
     {
       "id": "dns-acr",
       "label": "Private DNS Zone",
+      "x": 0,
+      "y": 750,
       "subtitle": "privatelink.azurecr.io",
-      "icon": "/icons/azure/networking/dns-zone-(private).png"
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/dns-zone-(private).png"
     },
     {
       "id": "dns-kv",
       "label": "Private DNS Zone",
+      "x": 360,
+      "y": 250,
       "subtitle": "privatelink.vaultcore.azure.net",
-      "icon": "/icons/azure/networking/dns-zone-(private).png"
+      "icon": "https://stouse2icbprd.blob.core.windows.net/public/icons/azure/networking/dns-zone-(private).png"
     }
   ],
   "edges": [
@@ -109,60 +151,6 @@
       "source": "internet",
       "target": "subnet-appgw",
       "label": "ingress traffic"
-    },
-    {
-      "id": "rg-contains-vnet",
-      "source": "rg-main",
-      "target": "vnet-main",
-      "label": "contains"
-    },
-    {
-      "id": "rg-contains-aks",
-      "source": "rg-main",
-      "target": "aks-cluster",
-      "label": "contains"
-    },
-    {
-      "id": "rg-contains-acr",
-      "source": "rg-main",
-      "target": "acr-main",
-      "label": "contains"
-    },
-    {
-      "id": "rg-contains-kv",
-      "source": "rg-main",
-      "target": "kv-main",
-      "label": "contains"
-    },
-    {
-      "id": "rg-contains-law",
-      "source": "rg-main",
-      "target": "law-main",
-      "label": "contains"
-    },
-    {
-      "id": "rg-contains-uami",
-      "source": "rg-main",
-      "target": "uami-aks",
-      "label": "contains"
-    },
-    {
-      "id": "vnet-contains-appgw-subnet",
-      "source": "vnet-main",
-      "target": "subnet-appgw",
-      "label": "contains"
-    },
-    {
-      "id": "vnet-contains-aks-subnet",
-      "source": "vnet-main",
-      "target": "subnet-aks",
-      "label": "contains"
-    },
-    {
-      "id": "vnet-contains-pe-subnet",
-      "source": "vnet-main",
-      "target": "subnet-pe",
-      "label": "contains"
     },
     {
       "id": "subnet-appgw-to-aks-subnet",

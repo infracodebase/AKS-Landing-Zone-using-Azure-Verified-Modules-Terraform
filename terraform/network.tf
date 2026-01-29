@@ -18,7 +18,7 @@ resource "azurerm_resource_group" "main" {
 # Virtual network for AKS cluster
 module "vnet" {
   source  = "Azure/avm-res-network-virtualnetwork/azurerm"
-  version = "~> 0.7.1"
+  version = "~> 0.7.2"
 
   name                = local.vnet_name
   resource_group_name = azurerm_resource_group.main.name
@@ -40,10 +40,10 @@ module "vnet" {
       # Delegation for Azure CNI
       delegation = [{
         name = "aks-delegation"
-        service_delegation = [{
+        service_delegation = {
           name    = "Microsoft.ContainerService/managedClusters"
           actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
-        }]
+        }
       }]
     }
 

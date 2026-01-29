@@ -2,21 +2,24 @@
 # This should be customized based on your organization's requirements
 
 terraform {
-  backend "azurerm" {
-    # Replace these values with your actual backend configuration
-    # resource_group_name  = "rg-terraform-state"
-    # storage_account_name = "terraformstatexxxxx"  # Must be globally unique
-    # container_name      = "tfstate"
-    # key                 = "aks/terraform.tfstate"
+  # For development/testing purposes, comment out the backend to use local state
+  # backend "azurerm" {
+  #   # Backend configuration - these values should be customized for your environment
+  #   # You can also configure these via:
+  #   # 1. Environment variables (ARM_*)
+  #   # 2. Command line (-backend-config)
+  #   # 3. Terraform Cloud/Enterprise backend configuration
 
-    # Optional: Use workspace-specific state files
-    # key = "aks/${terraform.workspace}/terraform.tfstate"
+  #   resource_group_name  = "rg-terraform-state"
+  #   storage_account_name = "tfstateaks001"  # Must be globally unique - customize this
+  #   container_name      = "tfstate"
+  #   key                 = "aks/terraform.tfstate"
 
-    # Security best practices
-    # use_msi              = true  # Use Managed Service Identity
-    # use_azuread_auth     = true  # Use Azure AD authentication
-    # snapshot             = true  # Enable state snapshots
-  }
+  #   # Security best practices - uncomment when using with Azure credentials
+  #   # use_msi              = true  # Use Managed Service Identity
+  #   # use_azuread_auth     = true  # Use Azure AD authentication
+  #   # snapshot             = true  # Enable state snapshots
+  # }
 }
 
 # Alternative: Remote backend examples for different scenarios

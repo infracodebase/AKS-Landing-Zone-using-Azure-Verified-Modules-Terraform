@@ -28,27 +28,9 @@ resource "azurerm_container_registry" "main" {
   network_rule_bypass_option = "AzureServices"
 
   # Enable vulnerability scanning for Premium SKU
-  dynamic "quarantine_policy" {
-    for_each = var.acr_sku == "Premium" ? [1] : []
-    content {
-      enabled = true
-    }
-  }
-
-  dynamic "trust_policy" {
-    for_each = var.acr_sku == "Premium" ? [1] : []
-    content {
-      enabled = true
-    }
-  }
-
-  dynamic "retention_policy" {
-    for_each = var.acr_sku == "Premium" ? [1] : []
-    content {
-      enabled = true
-      days    = 7
-    }
-  }
+  quarantine_policy_enabled = var.acr_sku == "Premium"
+  trust_policy_enabled      = var.acr_sku == "Premium"
+  retention_policy_in_days  = var.acr_sku == "Premium" ? 7 : null
 
   tags = local.common_tags
 }
