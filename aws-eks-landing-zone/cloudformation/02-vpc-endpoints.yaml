@@ -1,0 +1,366 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS EKS Landing Zone - VPC Endpoints for Private Connectivity'
+
+Parameters:
+  VPCStackName:
+    Description: Name of the VPC CloudFormation stack
+    Type: String
+
+  EnvironmentName:
+    Description: Environment name (dev, staging, prod)
+    Type: String
+    Default: dev
+
+  ClusterName:
+    Description: EKS Cluster name
+    Type: String
+    Default: eks-cluster
+
+Resources:
+  # Route 53 Private Hosted Zone
+  PrivateHostedZone:
+    Type: AWS::Route53::PrivateHostedZone
+    Properties:
+      HostedZoneConfig:
+        Comment: !Sub 'Private hosted zone for ${ClusterName}-${EnvironmentName}'
+      Name: !Sub '${ClusterName}-${EnvironmentName}.local'
+      VPCs:
+        - VPCId:
+            Fn::ImportValue: !Sub '${VPCStackName}-VPC'
+          VPCRegion: !Ref 'AWS::Region'
+      HostedZoneTags:
+        - Key: Name
+          Value: !Sub 'phz-${ClusterName}-${EnvironmentName}'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # VPC Endpoint for ECR API
+  ECRAPIVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPC'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ecr.api'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet1'
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet2'
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-VPCEndpointSecurityGroup'
+      PrivateDnsEnabled: true
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowECRAccess
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - ecr:GetAuthorizationToken
+              - ecr:BatchCheckLayerAvailability
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+            Resource: '*'
+
+  # VPC Endpoint for ECR DKR (Docker)
+  ECRDKRVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPC'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ecr.dkr'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet1'
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet2'
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-VPCEndpointSecurityGroup'
+      PrivateDnsEnabled: true
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowECRDockerAccess
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - ecr:BatchCheckLayerAvailability
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+            Resource: '*'
+
+  # VPC Endpoint for S3 (Gateway endpoint)
+  S3VPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPC'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-PrivateRouteTable1'
+        - Fn::ImportValue: !Sub '${VPCStackName}-PrivateRouteTable2'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowS3Access
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:DeleteObject
+              - s3:ListBucket
+            Resource:
+              - 'arn:aws:s3:::*'
+
+  # VPC Endpoint for Secrets Manager
+  SecretsManagerVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPC'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.secretsmanager'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet1'
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet2'
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-VPCEndpointSecurityGroup'
+      PrivateDnsEnabled: true
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowSecretsManagerAccess
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - secretsmanager:DescribeSecret
+              - secretsmanager:GetSecretValue
+            Resource: '*'
+
+  # VPC Endpoint for SSM (Systems Manager)
+  SSMVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPC'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ssm'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet1'
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet2'
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-VPCEndpointSecurityGroup'
+      PrivateDnsEnabled: true
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowSSMAccess
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - ssm:GetParameter
+              - ssm:GetParameters
+              - ssm:GetParametersByPath
+            Resource: '*'
+
+  # VPC Endpoint for EKS
+  EKSVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPC'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.eks'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet1'
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet2'
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-VPCEndpointSecurityGroup'
+      PrivateDnsEnabled: true
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowEKSAccess
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - eks:DescribeCluster
+              - eks:ListClusters
+            Resource: '*'
+
+  # VPC Endpoint for CloudWatch Logs
+  CloudWatchLogsVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPC'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.logs'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet1'
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet2'
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-VPCEndpointSecurityGroup'
+      PrivateDnsEnabled: true
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudWatchLogsAccess
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              - logs:DescribeLogGroups
+              - logs:DescribeLogStreams
+            Resource: '*'
+
+  # VPC Endpoint for CloudWatch Monitoring
+  CloudWatchMonitoringVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPC'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.monitoring'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet1'
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet2'
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-VPCEndpointSecurityGroup'
+      PrivateDnsEnabled: true
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudWatchMonitoringAccess
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - cloudwatch:PutMetricData
+              - cloudwatch:GetMetricStatistics
+              - cloudwatch:ListMetrics
+            Resource: '*'
+
+  # VPC Endpoint for STS (Security Token Service)
+  STSVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPC'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.sts'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet1'
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet2'
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-VPCEndpointSecurityGroup'
+      PrivateDnsEnabled: true
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowSTSAccess
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - sts:AssumeRole
+              - sts:AssumeRoleWithWebIdentity
+              - sts:GetCallerIdentity
+            Resource: '*'
+
+  # VPC Endpoint for EC2
+  EC2VPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPC'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.ec2'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet1'
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet2'
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-VPCEndpointSecurityGroup'
+      PrivateDnsEnabled: true
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowEC2Access
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - ec2:DescribeInstances
+              - ec2:DescribeInstanceTypes
+              - ec2:DescribeAvailabilityZones
+              - ec2:DescribeSecurityGroups
+              - ec2:DescribeSubnets
+              - ec2:DescribeVolumes
+              - ec2:DescribeSnapshots
+              - ec2:CreateTags
+            Resource: '*'
+
+  # VPC Endpoint for Autoscaling
+  AutoScalingVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Fn::ImportValue: !Sub '${VPCStackName}-VPC'
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.autoscaling'
+      VpcEndpointType: Interface
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet1'
+        - Fn::ImportValue: !Sub '${VPCStackName}-EndpointsSubnet2'
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub '${VPCStackName}-VPCEndpointSecurityGroup'
+      PrivateDnsEnabled: true
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowAutoScalingAccess
+            Effect: Allow
+            Principal: '*'
+            Action:
+              - autoscaling:DescribeAutoScalingGroups
+              - autoscaling:DescribeAutoScalingInstances
+              - autoscaling:DescribeLaunchConfigurations
+              - autoscaling:DescribeScalingActivities
+              - autoscaling:SetDesiredCapacity
+              - autoscaling:TerminateInstanceInAutoScalingGroup
+            Resource: '*'
+
+Outputs:
+  PrivateHostedZone:
+    Description: Private hosted zone ID
+    Value: !Ref PrivateHostedZone
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateHostedZone'
+
+  ECRAPIVPCEndpoint:
+    Description: ECR API VPC endpoint ID
+    Value: !Ref ECRAPIVPCEndpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-ECRAPIVPCEndpoint'
+
+  ECRDKRVPCEndpoint:
+    Description: ECR DKR VPC endpoint ID
+    Value: !Ref ECRDKRVPCEndpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-ECRDKRVPCEndpoint'
+
+  S3VPCEndpoint:
+    Description: S3 VPC endpoint ID
+    Value: !Ref S3VPCEndpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-S3VPCEndpoint'
+
+  SecretsManagerVPCEndpoint:
+    Description: Secrets Manager VPC endpoint ID
+    Value: !Ref SecretsManagerVPCEndpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-SecretsManagerVPCEndpoint'
+
+  EKSVPCEndpoint:
+    Description: EKS VPC endpoint ID
+    Value: !Ref EKSVPCEndpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-EKSVPCEndpoint'

@@ -1,0 +1,489 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS EKS Landing Zone - IAM Roles and Policies'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name (dev, staging, prod)
+    Type: String
+    Default: dev
+
+  ClusterName:
+    Description: EKS Cluster name
+    Type: String
+    Default: eks-cluster
+
+  EKSOIDCIssuerURL:
+    Description: OIDC issuer URL for the EKS cluster (without https://)
+    Type: String
+    Default: ""
+
+Conditions:
+  HasOIDCIssuer: !Not [!Equals [!Ref EKSOIDCIssuerURL, ""]]
+
+Resources:
+  # EKS Cluster Service Role
+  EKSClusterServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'AWSServiceRoleForAmazonEKS-${ClusterName}-${EnvironmentName}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: eks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+      Tags:
+        - Key: Name
+          Value: !Sub 'EKSClusterServiceRole-${ClusterName}-${EnvironmentName}'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # EKS Node Instance Role
+  EKSNodeInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'AWSServiceRoleForAmazonEKSNodeGroup-${ClusterName}-${EnvironmentName}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Tags:
+        - Key: Name
+          Value: !Sub 'EKSNodeInstanceRole-${ClusterName}-${EnvironmentName}'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # Instance Profile for Node Group
+  EKSNodeInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub 'EKSNodeInstanceProfile-${ClusterName}-${EnvironmentName}'
+      Roles:
+        - !Ref EKSNodeInstanceRole
+
+  # Custom Policy for Enhanced Node Permissions
+  EKSNodeEnhancedPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub 'EKSNodeEnhancedPolicy-${ClusterName}-${EnvironmentName}'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # CloudWatch and logging permissions
+          - Sid: CloudWatchLogsPermissions
+            Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+              - logs:DescribeLogGroups
+              - logs:DescribeLogStreams
+            Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/eks/${ClusterName}-${EnvironmentName}/*'
+
+          # CloudWatch metrics permissions
+          - Sid: CloudWatchMetricsPermissions
+            Effect: Allow
+            Action:
+              - cloudwatch:PutMetricData
+              - cloudwatch:GetMetricStatistics
+              - cloudwatch:ListMetrics
+            Resource: '*'
+
+          # SSM Parameter Store access for secrets
+          - Sid: SSMParameterStorePermissions
+            Effect: Allow
+            Action:
+              - ssm:GetParameter
+              - ssm:GetParameters
+              - ssm:GetParametersByPath
+            Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${ClusterName}-${EnvironmentName}/*'
+
+          # Secrets Manager access
+          - Sid: SecretsManagerPermissions
+            Effect: Allow
+            Action:
+              - secretsmanager:GetSecretValue
+              - secretsmanager:DescribeSecret
+            Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${ClusterName}-${EnvironmentName}/*'
+
+          # Auto Scaling permissions for cluster autoscaler
+          - Sid: AutoScalingPermissions
+            Effect: Allow
+            Action:
+              - autoscaling:DescribeAutoScalingGroups
+              - autoscaling:DescribeAutoScalingInstances
+              - autoscaling:DescribeLaunchConfigurations
+              - autoscaling:DescribeScalingActivities
+              - autoscaling:SetDesiredCapacity
+              - autoscaling:TerminateInstanceInAutoScalingGroup
+              - autoscaling:DescribeTags
+            Resource: '*'
+
+          # EC2 permissions for cluster autoscaler and EBS CSI
+          - Sid: EC2PermissionsForClusterAutoscaler
+            Effect: Allow
+            Action:
+              - ec2:DescribeInstances
+              - ec2:DescribeInstanceTypes
+              - ec2:DescribeLaunchTemplateVersions
+              - ec2:DescribeAvailabilityZones
+              - ec2:DescribeImages
+              - ec2:DescribeSecurityGroups
+              - ec2:DescribeSubnets
+            Resource: '*'
+
+          # EBS CSI Driver permissions
+          - Sid: EBSCSIPermissions
+            Effect: Allow
+            Action:
+              - ec2:AttachVolume
+              - ec2:CreateSnapshot
+              - ec2:CreateTags
+              - ec2:CreateVolume
+              - ec2:DeleteSnapshot
+              - ec2:DeleteTags
+              - ec2:DeleteVolume
+              - ec2:DescribeAvailabilityZones
+              - ec2:DescribeInstances
+              - ec2:DescribeSnapshots
+              - ec2:DescribeTags
+              - ec2:DescribeVolumes
+              - ec2:DescribeVolumesModifications
+              - ec2:DetachVolume
+              - ec2:ModifyVolume
+            Resource: '*'
+
+          # ALB Ingress Controller permissions
+          - Sid: ALBIngressControllerPermissions
+            Effect: Allow
+            Action:
+              - elasticloadbalancing:CreateLoadBalancer
+              - elasticloadbalancing:CreateTargetGroup
+              - elasticloadbalancing:DeleteLoadBalancer
+              - elasticloadbalancing:DeleteTargetGroup
+              - elasticloadbalancing:DescribeLoadBalancers
+              - elasticloadbalancing:DescribeTargetGroups
+              - elasticloadbalancing:DescribeTargetHealth
+              - elasticloadbalancing:ModifyLoadBalancerAttributes
+              - elasticloadbalancing:ModifyTargetGroup
+              - elasticloadbalancing:ModifyTargetGroupAttributes
+              - elasticloadbalancing:RegisterTargets
+              - elasticloadbalancing:DeregisterTargets
+              - elasticloadbalancing:CreateListener
+              - elasticloadbalancing:DeleteListener
+              - elasticloadbalancing:DescribeListeners
+              - elasticloadbalancing:ModifyListener
+              - elasticloadbalancing:AddTags
+              - elasticloadbalancing:RemoveTags
+              - elasticloadbalancing:DescribeTags
+            Resource: '*'
+
+          # WAF permissions for ALB
+          - Sid: WAFPermissions
+            Effect: Allow
+            Action:
+              - wafv2:GetWebACL
+              - wafv2:AssociateWebACL
+              - wafv2:DisassociateWebACL
+            Resource: '*'
+
+          # Shield permissions
+          - Sid: ShieldPermissions
+            Effect: Allow
+            Action:
+              - shield:DescribeProtection
+              - shield:CreateProtection
+              - shield:DeleteProtection
+            Resource: '*'
+      Roles:
+        - !Ref EKSNodeInstanceRole
+
+  # AWS Load Balancer Controller Service Account Role
+  AWSLoadBalancerControllerRole:
+    Type: AWS::IAM::Role
+    Condition: HasOIDCIssuer
+    Properties:
+      RoleName: !Sub 'AWSLoadBalancerControllerRole-${ClusterName}-${EnvironmentName}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub 'arn:aws:iam::${AWS::AccountId}:oidc-provider/${EKSOIDCIssuerURL}'
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                !Sub '${EKSOIDCIssuerURL}:sub': 'system:serviceaccount:kube-system:aws-load-balancer-controller'
+                !Sub '${EKSOIDCIssuerURL}:aud': 'sts.amazonaws.com'
+      Tags:
+        - Key: Name
+          Value: !Sub 'AWSLoadBalancerControllerRole-${ClusterName}-${EnvironmentName}'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # AWS Load Balancer Controller Policy
+  AWSLoadBalancerControllerPolicy:
+    Type: AWS::IAM::Policy
+    Condition: HasOIDCIssuer
+    Properties:
+      PolicyName: !Sub 'AWSLoadBalancerControllerPolicy-${ClusterName}-${EnvironmentName}'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - iam:CreateServiceLinkedRole
+              - ec2:DescribeAccountAttributes
+              - ec2:DescribeAddresses
+              - ec2:DescribeAvailabilityZones
+              - ec2:DescribeInternetGateways
+              - ec2:DescribeVpcs
+              - ec2:DescribeSubnets
+              - ec2:DescribeSecurityGroups
+              - ec2:DescribeInstances
+              - ec2:DescribeNetworkInterfaces
+              - ec2:DescribeTags
+              - ec2:GetCoipPoolUsage
+              - ec2:DescribeCoipPools
+              - elasticloadbalancing:DescribeLoadBalancers
+              - elasticloadbalancing:DescribeLoadBalancerAttributes
+              - elasticloadbalancing:DescribeListeners
+              - elasticloadbalancing:DescribeListenerCertificates
+              - elasticloadbalancing:DescribeSSLPolicies
+              - elasticloadbalancing:DescribeRules
+              - elasticloadbalancing:DescribeTargetGroups
+              - elasticloadbalancing:DescribeTargetGroupAttributes
+              - elasticloadbalancing:DescribeTargetHealth
+              - elasticloadbalancing:DescribeTags
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - cognito-idp:DescribeUserPoolClient
+              - acm:ListCertificates
+              - acm:DescribeCertificate
+              - iam:ListServerCertificates
+              - iam:GetServerCertificate
+              - wafv2:GetWebACL
+              - wafv2:GetWebACLForResource
+              - wafv2:AssociateWebACL
+              - wafv2:DisassociateWebACL
+              - shield:DescribeProtection
+              - shield:CreateProtection
+              - shield:DeleteProtection
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - ec2:CreateTags
+            Resource: 'arn:aws:ec2:*:*:network-interface/*'
+            Condition:
+              StringEquals:
+                'ec2:CreateAction': 'CreateNetworkInterface'
+          - Effect: Allow
+            Action:
+              - ec2:CreateTags
+              - ec2:DeleteTags
+            Resource: 'arn:aws:ec2:*:*:security-group/*'
+            Condition:
+              Null:
+                'aws:RequestedRegion': 'false'
+          - Effect: Allow
+            Action:
+              - elasticloadbalancing:CreateLoadBalancer
+              - elasticloadbalancing:CreateTargetGroup
+            Resource: '*'
+            Condition:
+              Null:
+                'aws:RequestedRegion': 'false'
+          - Effect: Allow
+            Action:
+              - elasticloadbalancing:CreateListener
+              - elasticloadbalancing:DeleteListener
+              - elasticloadbalancing:CreateRule
+              - elasticloadbalancing:DeleteRule
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - elasticloadbalancing:AddTags
+              - elasticloadbalancing:RemoveTags
+            Resource:
+              - 'arn:aws:elasticloadbalancing:*:*:targetgroup/*/*'
+              - 'arn:aws:elasticloadbalancing:*:*:loadbalancer/net/*/*'
+              - 'arn:aws:elasticloadbalancing:*:*:loadbalancer/app/*/*'
+            Condition:
+              Null:
+                'aws:RequestedRegion': 'false'
+              'aws:ResourceTag/elbv2.k8s.aws/cluster': !Sub '${ClusterName}-${EnvironmentName}'
+          - Effect: Allow
+            Action:
+              - elasticloadbalancing:RegisterTargets
+              - elasticloadbalancing:DeregisterTargets
+            Resource: 'arn:aws:elasticloadbalancing:*:*:targetgroup/*/*'
+          - Effect: Allow
+            Action:
+              - elasticloadbalancing:SetWebAcl
+              - elasticloadbalancing:ModifyListener
+              - elasticloadbalancing:AddListenerCertificates
+              - elasticloadbalancing:RemoveListenerCertificates
+              - elasticloadbalancing:ModifyRule
+            Resource: '*'
+      Roles:
+        - !Ref AWSLoadBalancerControllerRole
+
+  # EBS CSI Driver Service Account Role
+  EBSCSIDriverRole:
+    Type: AWS::IAM::Role
+    Condition: HasOIDCIssuer
+    Properties:
+      RoleName: !Sub 'EBSCSIDriverRole-${ClusterName}-${EnvironmentName}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub 'arn:aws:iam::${AWS::AccountId}:oidc-provider/${EKSOIDCIssuerURL}'
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                !Sub '${EKSOIDCIssuerURL}:sub': 'system:serviceaccount:kube-system:ebs-csi-controller-sa'
+                !Sub '${EKSOIDCIssuerURL}:aud': 'sts.amazonaws.com'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy
+      Tags:
+        - Key: Name
+          Value: !Sub 'EBSCSIDriverRole-${ClusterName}-${EnvironmentName}'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # Cluster Autoscaler Service Account Role
+  ClusterAutoscalerRole:
+    Type: AWS::IAM::Role
+    Condition: HasOIDCIssuer
+    Properties:
+      RoleName: !Sub 'ClusterAutoscalerRole-${ClusterName}-${EnvironmentName}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub 'arn:aws:iam::${AWS::AccountId}:oidc-provider/${EKSOIDCIssuerURL}'
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                !Sub '${EKSOIDCIssuerURL}:sub': 'system:serviceaccount:kube-system:cluster-autoscaler'
+                !Sub '${EKSOIDCIssuerURL}:aud': 'sts.amazonaws.com'
+      Tags:
+        - Key: Name
+          Value: !Sub 'ClusterAutoscalerRole-${ClusterName}-${EnvironmentName}'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # Cluster Autoscaler Policy
+  ClusterAutoscalerPolicy:
+    Type: AWS::IAM::Policy
+    Condition: HasOIDCIssuer
+    Properties:
+      PolicyName: !Sub 'ClusterAutoscalerPolicy-${ClusterName}-${EnvironmentName}'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ClusterAutoscalerPermissions
+            Effect: Allow
+            Action:
+              - autoscaling:DescribeAutoScalingGroups
+              - autoscaling:DescribeAutoScalingInstances
+              - autoscaling:DescribeLaunchConfigurations
+              - autoscaling:DescribeScalingActivities
+              - autoscaling:DescribeTags
+              - autoscaling:SetDesiredCapacity
+              - autoscaling:TerminateInstanceInAutoScalingGroup
+              - ec2:DescribeImages
+              - ec2:DescribeInstanceTypes
+              - ec2:DescribeLaunchTemplateVersions
+              - ec2:GetInstanceTypesFromInstanceRequirements
+              - eks:DescribeNodegroup
+            Resource: '*'
+            Condition:
+              StringEquals:
+                'autoscaling:ResourceTag/k8s.io/cluster-autoscaler/enabled': 'true'
+                'autoscaling:ResourceTag/kubernetes.io/cluster/${ClusterName}-${EnvironmentName}': 'owned'
+      Roles:
+        - !Ref ClusterAutoscalerRole
+
+  # CloudWatch Container Insights Role
+  CloudWatchContainerInsightsRole:
+    Type: AWS::IAM::Role
+    Condition: HasOIDCIssuer
+    Properties:
+      RoleName: !Sub 'CloudWatchContainerInsightsRole-${ClusterName}-${EnvironmentName}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub 'arn:aws:iam::${AWS::AccountId}:oidc-provider/${EKSOIDCIssuerURL}'
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                !Sub '${EKSOIDCIssuerURL}:sub': 'system:serviceaccount:amazon-cloudwatch:cloudwatch-agent'
+                !Sub '${EKSOIDCIssuerURL}:aud': 'sts.amazonaws.com'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Tags:
+        - Key: Name
+          Value: !Sub 'CloudWatchContainerInsightsRole-${ClusterName}-${EnvironmentName}'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+Outputs:
+  EKSClusterServiceRoleArn:
+    Description: EKS Cluster Service Role ARN
+    Value: !GetAtt EKSClusterServiceRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-EKSClusterServiceRoleArn'
+
+  EKSNodeInstanceRoleArn:
+    Description: EKS Node Instance Role ARN
+    Value: !GetAtt EKSNodeInstanceRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-EKSNodeInstanceRoleArn'
+
+  EKSNodeInstanceProfile:
+    Description: EKS Node Instance Profile
+    Value: !Ref EKSNodeInstanceProfile
+    Export:
+      Name: !Sub '${AWS::StackName}-EKSNodeInstanceProfile'
+
+  AWSLoadBalancerControllerRoleArn:
+    Description: AWS Load Balancer Controller Role ARN
+    Value: !If [HasOIDCIssuer, !GetAtt AWSLoadBalancerControllerRole.Arn, '']
+    Export:
+      Name: !Sub '${AWS::StackName}-AWSLoadBalancerControllerRoleArn'
+
+  EBSCSIDriverRoleArn:
+    Description: EBS CSI Driver Role ARN
+    Value: !If [HasOIDCIssuer, !GetAtt EBSCSIDriverRole.Arn, '']
+    Export:
+      Name: !Sub '${AWS::StackName}-EBSCSIDriverRoleArn'
+
+  ClusterAutoscalerRoleArn:
+    Description: Cluster Autoscaler Role ARN
+    Value: !If [HasOIDCIssuer, !GetAtt ClusterAutoscalerRole.Arn, '']
+    Export:
+      Name: !Sub '${AWS::StackName}-ClusterAutoscalerRoleArn'
+
+  CloudWatchContainerInsightsRoleArn:
+    Description: CloudWatch Container Insights Role ARN
+    Value: !If [HasOIDCIssuer, !GetAtt CloudWatchContainerInsightsRole.Arn, '']
+    Export:
+      Name: !Sub '${AWS::StackName}-CloudWatchContainerInsightsRoleArn'

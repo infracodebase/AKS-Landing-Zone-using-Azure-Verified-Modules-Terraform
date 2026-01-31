@@ -1,0 +1,450 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS EKS Landing Zone - VPC and Networking Infrastructure'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name (dev, staging, prod)
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+  ClusterName:
+    Description: EKS Cluster name
+    Type: String
+    Default: eks-cluster
+
+  VpcCidr:
+    Description: CIDR block for the VPC
+    Type: String
+    Default: 10.0.0.0/16
+
+  PrivateSubnet1Cidr:
+    Description: CIDR block for private subnet 1
+    Type: String
+    Default: 10.0.1.0/24
+
+  PrivateSubnet2Cidr:
+    Description: CIDR block for private subnet 2
+    Type: String
+    Default: 10.0.2.0/24
+
+  PublicSubnet1Cidr:
+    Description: CIDR block for public subnet 1
+    Type: String
+    Default: 10.0.10.0/24
+
+  PublicSubnet2Cidr:
+    Description: CIDR block for public subnet 2
+    Type: String
+    Default: 10.0.11.0/24
+
+  EndpointsSubnet1Cidr:
+    Description: CIDR block for VPC endpoints subnet 1
+    Type: String
+    Default: 10.0.20.0/24
+
+  EndpointsSubnet2Cidr:
+    Description: CIDR block for VPC endpoints subnet 2
+    Type: String
+    Default: 10.0.21.0/24
+
+Mappings:
+  AZMappings:
+    us-east-1:
+      AZ1: us-east-1a
+      AZ2: us-east-1b
+    us-west-2:
+      AZ1: us-west-2a
+      AZ2: us-west-2b
+    eu-west-1:
+      AZ1: eu-west-1a
+      AZ2: eu-west-1b
+
+Resources:
+  # VPC
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub 'vpc-${ClusterName}-${EnvironmentName}'
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Purpose
+          Value: EKS Landing Zone
+
+  # Internet Gateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub 'igw-${ClusterName}-${EnvironmentName}'
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  # Public Subnets (for NAT Gateways and Load Balancers)
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !FindInMap [AZMappings, !Ref 'AWS::Region', AZ1]
+      CidrBlock: !Ref PublicSubnet1Cidr
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub 'snet-${ClusterName}-public-1-${EnvironmentName}'
+        - Key: Type
+          Value: Public
+        - Key: kubernetes.io/role/elb
+          Value: '1'
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !FindInMap [AZMappings, !Ref 'AWS::Region', AZ2]
+      CidrBlock: !Ref PublicSubnet2Cidr
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub 'snet-${ClusterName}-public-2-${EnvironmentName}'
+        - Key: Type
+          Value: Public
+        - Key: kubernetes.io/role/elb
+          Value: '1'
+
+  # Private Subnets (for EKS Nodes)
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !FindInMap [AZMappings, !Ref 'AWS::Region', AZ1]
+      CidrBlock: !Ref PrivateSubnet1Cidr
+      Tags:
+        - Key: Name
+          Value: !Sub 'snet-${ClusterName}-private-1-${EnvironmentName}'
+        - Key: Type
+          Value: Private
+        - Key: kubernetes.io/role/internal-elb
+          Value: '1'
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !FindInMap [AZMappings, !Ref 'AWS::Region', AZ2]
+      CidrBlock: !Ref PrivateSubnet2Cidr
+      Tags:
+        - Key: Name
+          Value: !Sub 'snet-${ClusterName}-private-2-${EnvironmentName}'
+        - Key: Type
+          Value: Private
+        - Key: kubernetes.io/role/internal-elb
+          Value: '1'
+
+  # VPC Endpoints Subnets
+  EndpointsSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !FindInMap [AZMappings, !Ref 'AWS::Region', AZ1]
+      CidrBlock: !Ref EndpointsSubnet1Cidr
+      Tags:
+        - Key: Name
+          Value: !Sub 'snet-${ClusterName}-endpoints-1-${EnvironmentName}'
+        - Key: Type
+          Value: VPC Endpoints
+
+  EndpointsSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !FindInMap [AZMappings, !Ref 'AWS::Region', AZ2]
+      CidrBlock: !Ref EndpointsSubnet2Cidr
+      Tags:
+        - Key: Name
+          Value: !Sub 'snet-${ClusterName}-endpoints-2-${EnvironmentName}'
+        - Key: Type
+          Value: VPC Endpoints
+
+  # NAT Gateways
+  NatGateway1EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub 'eip-natgw-1-${ClusterName}-${EnvironmentName}'
+
+  NatGateway2EIP:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub 'eip-natgw-2-${ClusterName}-${EnvironmentName}'
+
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway1EIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: !Sub 'natgw-1-${ClusterName}-${EnvironmentName}'
+
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatGateway2EIP.AllocationId
+      SubnetId: !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: !Sub 'natgw-2-${ClusterName}-${EnvironmentName}'
+
+  # Route Tables
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'rt-${ClusterName}-public-${EnvironmentName}'
+
+  DefaultPublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet1
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet2
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'rt-${ClusterName}-private-1-${EnvironmentName}'
+
+  DefaultPrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      SubnetId: !Ref PrivateSubnet1
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'rt-${ClusterName}-private-2-${EnvironmentName}'
+
+  DefaultPrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      SubnetId: !Ref PrivateSubnet2
+
+  EndpointsRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'rt-${ClusterName}-endpoints-1-${EnvironmentName}'
+
+  EndpointsSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref EndpointsRouteTable1
+      SubnetId: !Ref EndpointsSubnet1
+
+  EndpointsRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'rt-${ClusterName}-endpoints-2-${EnvironmentName}'
+
+  EndpointsSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref EndpointsRouteTable2
+      SubnetId: !Ref EndpointsSubnet2
+
+  # Security Groups
+  EKSClusterSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub 'sg-${ClusterName}-cluster-${EnvironmentName}'
+      GroupDescription: Security group for EKS cluster control plane
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref EKSNodeSecurityGroup
+          Description: Allow HTTPS from worker nodes
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub 'sg-${ClusterName}-cluster-${EnvironmentName}'
+
+  EKSNodeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub 'sg-${ClusterName}-nodes-${EnvironmentName}'
+      GroupDescription: Security group for EKS worker nodes
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 1025
+          ToPort: 65535
+          SourceSecurityGroupId: !Ref EKSClusterSecurityGroup
+          Description: Allow communication from EKS cluster
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref EKSClusterSecurityGroup
+          Description: Allow HTTPS from EKS cluster
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub 'sg-${ClusterName}-nodes-${EnvironmentName}'
+
+  # Self-referencing rule for node-to-node communication
+  EKSNodeSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Allow nodes to communicate with each other
+      GroupId: !Ref EKSNodeSecurityGroup
+      SourceSecurityGroupId: !Ref EKSNodeSecurityGroup
+      IpProtocol: -1
+
+  VPCEndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub 'sg-${ClusterName}-vpc-endpoints-${EnvironmentName}'
+      GroupDescription: Security group for VPC endpoints
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr
+          Description: Allow HTTPS from VPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'sg-${ClusterName}-vpc-endpoints-${EnvironmentName}'
+
+Outputs:
+  VPC:
+    Description: VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub '${AWS::StackName}-VPC'
+
+  PrivateSubnet1:
+    Description: Private subnet 1 ID
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet1'
+
+  PrivateSubnet2:
+    Description: Private subnet 2 ID
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateSubnet2'
+
+  PublicSubnet1:
+    Description: Public subnet 1 ID
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet1'
+
+  PublicSubnet2:
+    Description: Public subnet 2 ID
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet2'
+
+  EndpointsSubnet1:
+    Description: VPC endpoints subnet 1 ID
+    Value: !Ref EndpointsSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-EndpointsSubnet1'
+
+  EndpointsSubnet2:
+    Description: VPC endpoints subnet 2 ID
+    Value: !Ref EndpointsSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-EndpointsSubnet2'
+
+  EKSClusterSecurityGroup:
+    Description: EKS cluster security group ID
+    Value: !Ref EKSClusterSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-EKSClusterSecurityGroup'
+
+  EKSNodeSecurityGroup:
+    Description: EKS node security group ID
+    Value: !Ref EKSNodeSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-EKSNodeSecurityGroup'
+
+  VPCEndpointSecurityGroup:
+    Description: VPC endpoint security group ID
+    Value: !Ref VPCEndpointSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-VPCEndpointSecurityGroup'
+
+  VpcCidr:
+    Description: VPC CIDR block
+    Value: !Ref VpcCidr
+    Export:
+      Name: !Sub '${AWS::StackName}-VpcCidr'

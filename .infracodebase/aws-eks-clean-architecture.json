@@ -1,0 +1,285 @@
+{
+  "name": "AWS EKS Landing Zone - Production Architecture",
+  "nodes": [
+    {
+      "id": "users",
+      "label": "Users",
+      "subtitle": "External Access",
+      "icon": "/icons/aws/general/users.png",
+      "type": "resource",
+      "x": 50,
+      "y": 300
+    },
+    {
+      "id": "internet-gateway",
+      "label": "Internet Gateway",
+      "subtitle": "Public Entry Point",
+      "icon": "/icons/aws/network/internet-gateway.png",
+      "type": "resource",
+      "x": 270,
+      "y": 300
+    },
+    {
+      "id": "vpc",
+      "label": "VPC",
+      "subtitle": "10.0.0.0/16",
+      "icon": "/icons/aws/network/vpc.png",
+      "type": "container",
+      "x": 490,
+      "y": 50,
+      "width": 1320,
+      "height": 940
+    },
+    {
+      "id": "public-subnet",
+      "label": "Public Subnets",
+      "subtitle": "Multi-AZ (10.0.10.0/24, 10.0.11.0/24)",
+      "icon": "/icons/aws/network/public-subnet.png",
+      "type": "container",
+      "x": 150,
+      "y": 90,
+      "width": 300,
+      "height": 330,
+      "parentId": "vpc"
+    },
+    {
+      "id": "nat-gateway",
+      "label": "NAT Gateways",
+      "subtitle": "HA across AZs",
+      "icon": "/icons/aws/network/nat-gateway.png",
+      "type": "resource",
+      "x": 90,
+      "y": 90,
+      "parentId": "public-subnet"
+    },
+    {
+      "id": "private-subnet",
+      "label": "Private Subnets",
+      "subtitle": "EKS Nodes (10.0.1.0/24, 10.0.2.0/24)",
+      "icon": "/icons/aws/network/private-subnet.png",
+      "type": "container",
+      "x": 90,
+      "y": 520,
+      "width": 520,
+      "height": 330,
+      "parentId": "vpc"
+    },
+    {
+      "id": "eks-cluster",
+      "label": "EKS Cluster",
+      "subtitle": "Private API Endpoint",
+      "icon": "/icons/aws/compute/elastic-kubernetes-service.png",
+      "type": "resource",
+      "x": 90,
+      "y": 90,
+      "parentId": "private-subnet"
+    },
+    {
+      "id": "node-groups",
+      "label": "Node Groups",
+      "subtitle": "System + User Nodes",
+      "icon": "/icons/aws/compute/ec2.png",
+      "type": "resource",
+      "x": 310,
+      "y": 90,
+      "parentId": "private-subnet"
+    },
+    {
+      "id": "load-balancer",
+      "label": "Application LB",
+      "subtitle": "Ingress Controller",
+      "icon": "/icons/aws/network/elb-application-load-balancer.png",
+      "type": "resource",
+      "x": 630,
+      "y": 150,
+      "parentId": "vpc"
+    },
+    {
+      "id": "endpoints-subnet",
+      "label": "VPC Endpoints",
+      "subtitle": "Private AWS Access",
+      "icon": "/icons/aws/network/endpoint.png",
+      "type": "container",
+      "x": 710,
+      "y": 450,
+      "width": 520,
+      "height": 380,
+      "parentId": "vpc"
+    },
+    {
+      "id": "ecr-endpoint",
+      "label": "ECR Endpoint",
+      "subtitle": "Container Images",
+      "icon": "/icons/aws/network/endpoint.png",
+      "type": "resource",
+      "x": 90,
+      "y": 90,
+      "parentId": "endpoints-subnet"
+    },
+    {
+      "id": "other-endpoints",
+      "label": "Other Endpoints",
+      "subtitle": "S3, Secrets, CloudWatch",
+      "icon": "/icons/aws/network/endpoint.png",
+      "type": "resource",
+      "x": 310,
+      "y": 140,
+      "parentId": "endpoints-subnet"
+    },
+    {
+      "id": "aws-services",
+      "label": "AWS Managed Services",
+      "x": 1910,
+      "y": 50,
+      "subtitle": "External to VPC",
+      "icon": "/icons/aws/aws.png",
+      "type": "container",
+      "width": 960,
+      "height": 790
+    },
+    {
+      "id": "ecr",
+      "label": "ECR",
+      "subtitle": "Container Registry",
+      "icon": "/icons/aws/compute/ec2-container-registry.png",
+      "type": "resource",
+      "x": 90,
+      "y": 90,
+      "parentId": "aws-services"
+    },
+    {
+      "id": "secrets-manager",
+      "label": "Secrets Manager",
+      "subtitle": "Application Secrets",
+      "icon": "/icons/aws/security/secrets-manager.png",
+      "type": "resource",
+      "x": 310,
+      "y": 170,
+      "parentId": "aws-services"
+    },
+    {
+      "id": "cloudwatch",
+      "label": "CloudWatch",
+      "subtitle": "Monitoring & Logs",
+      "icon": "/icons/aws/management/cloudwatch.png",
+      "type": "resource",
+      "x": 530,
+      "y": 250,
+      "parentId": "aws-services"
+    },
+    {
+      "id": "s3",
+      "label": "S3",
+      "x": 530,
+      "y": 550,
+      "subtitle": "Artifacts & Backups",
+      "icon": "/icons/aws/storage/s3.png",
+      "type": "resource",
+      "parentId": "aws-services"
+    },
+    {
+      "id": "iam",
+      "label": "IAM",
+      "x": 750,
+      "y": 460,
+      "subtitle": "IRSA Roles",
+      "icon": "/icons/aws/security/identity-and-access-management-iam.png",
+      "type": "resource",
+      "parentId": "aws-services"
+    }
+  ],
+  "edges": [
+    {
+      "id": "user-traffic",
+      "source": "users",
+      "target": "internet-gateway",
+      "label": "HTTPS/443"
+    },
+    {
+      "id": "external-traffic",
+      "source": "internet-gateway",
+      "target": "load-balancer",
+      "label": "Internet Traffic"
+    },
+    {
+      "id": "app-traffic",
+      "source": "load-balancer",
+      "target": "node-groups",
+      "label": "Application Traffic"
+    },
+    {
+      "id": "nat-access",
+      "source": "nat-gateway",
+      "target": "node-groups",
+      "label": "Internet Access"
+    },
+    {
+      "id": "cluster-control",
+      "source": "eks-cluster",
+      "target": "node-groups",
+      "label": "Control Plane"
+    },
+    {
+      "id": "ecr-access",
+      "source": "node-groups",
+      "target": "ecr-endpoint",
+      "label": "Private Link"
+    },
+    {
+      "id": "endpoints-access",
+      "source": "node-groups",
+      "target": "other-endpoints",
+      "label": "Private Access"
+    },
+    {
+      "id": "container-images",
+      "source": "ecr-endpoint",
+      "target": "ecr",
+      "label": "Container Images"
+    },
+    {
+      "id": "secrets-access",
+      "source": "other-endpoints",
+      "target": "secrets-manager",
+      "label": "Secrets",
+      "style": "dashed"
+    },
+    {
+      "id": "monitoring",
+      "source": "other-endpoints",
+      "target": "cloudwatch",
+      "label": "Logs & Metrics",
+      "style": "dashed"
+    },
+    {
+      "id": "artifacts",
+      "source": "other-endpoints",
+      "target": "s3",
+      "label": "Artifacts",
+      "style": "dashed"
+    },
+    {
+      "id": "irsa-auth",
+      "source": "eks-cluster",
+      "target": "iam",
+      "label": "IRSA Authentication",
+      "style": "dotted"
+    }
+  ],
+  "legend": {
+    "edges": [
+      {
+        "label": "Network Traffic",
+        "style": "solid"
+      },
+      {
+        "label": "Private API Access",
+        "style": "dashed"
+      },
+      {
+        "label": "Authentication",
+        "style": "dotted"
+      }
+    ]
+  }
+}

@@ -1,0 +1,471 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS EKS Landing Zone - EKS Cluster and Node Groups'
+
+Parameters:
+  EnvironmentName:
+    Description: Environment name (dev, staging, prod)
+    Type: String
+    Default: dev
+
+  ClusterName:
+    Description: EKS Cluster name
+    Type: String
+    Default: eks-cluster
+
+  KubernetesVersion:
+    Description: Kubernetes version
+    Type: String
+    Default: '1.31'
+    AllowedValues: ['1.29', '1.30', '1.31']
+
+  VPCStackName:
+    Description: Name of the VPC CloudFormation stack
+    Type: String
+
+  IAMStackName:
+    Description: Name of the IAM CloudFormation stack
+    Type: String
+
+  ECRStackName:
+    Description: Name of the ECR CloudFormation stack
+    Type: String
+
+  EndpointsStackName:
+    Description: Name of the VPC Endpoints CloudFormation stack
+    Type: String
+
+  SystemNodeInstanceType:
+    Description: EC2 instance type for system node group
+    Type: String
+    Default: t3.medium
+    AllowedValues: [t3.small, t3.medium, t3.large, m5.large, m5.xlarge, m5.2xlarge]
+
+  SystemNodeMinSize:
+    Description: Minimum number of nodes in system node group
+    Type: Number
+    Default: 1
+    MinValue: 1
+    MaxValue: 10
+
+  SystemNodeMaxSize:
+    Description: Maximum number of nodes in system node group
+    Type: Number
+    Default: 3
+    MinValue: 1
+    MaxValue: 20
+
+  SystemNodeDesiredSize:
+    Description: Desired number of nodes in system node group
+    Type: Number
+    Default: 2
+    MinValue: 1
+    MaxValue: 20
+
+  UserNodeInstanceType:
+    Description: EC2 instance type for user node group
+    Type: String
+    Default: m5.large
+    AllowedValues: [t3.medium, t3.large, m5.large, m5.xlarge, m5.2xlarge, m5.4xlarge]
+
+  UserNodeMinSize:
+    Description: Minimum number of nodes in user node group
+    Type: Number
+    Default: 2
+    MinValue: 1
+    MaxValue: 10
+
+  UserNodeMaxSize:
+    Description: Maximum number of nodes in user node group
+    Type: Number
+    Default: 10
+    MinValue: 1
+    MaxValue: 50
+
+  UserNodeDesiredSize:
+    Description: Desired number of nodes in user node group
+    Type: Number
+    Default: 3
+    MinValue: 1
+    MaxValue: 50
+
+  EnablePrivateEndpoint:
+    Description: Enable private endpoint access
+    Type: String
+    Default: true
+    AllowedValues: [true, false]
+
+  EnablePublicEndpoint:
+    Description: Enable public endpoint access (for management)
+    Type: String
+    Default: false
+    AllowedValues: [true, false]
+
+  PublicAccessCIDRs:
+    Description: CIDR blocks for public API access (comma-separated)
+    Type: CommaDelimitedList
+    Default: "0.0.0.0/0"
+
+Conditions:
+  EnablePublicAccess: !Equals [!Ref EnablePublicEndpoint, 'true']
+
+Resources:
+  # EKS Cluster
+  EKSCluster:
+    Type: AWS::EKS::Cluster
+    Properties:
+      Name: !Sub '${ClusterName}-${EnvironmentName}'
+      Version: !Ref KubernetesVersion
+      RoleArn:
+        Fn::ImportValue: !Sub '${IAMStackName}-EKSClusterServiceRoleArn'
+      ResourcesVpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${VPCStackName}-EKSClusterSecurityGroup'
+        SubnetIds:
+          - Fn::ImportValue: !Sub '${VPCStackName}-PrivateSubnet1'
+          - Fn::ImportValue: !Sub '${VPCStackName}-PrivateSubnet2'
+          - !If
+            - EnablePublicAccess
+            - Fn::ImportValue: !Sub '${VPCStackName}-PublicSubnet1'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - EnablePublicAccess
+            - Fn::ImportValue: !Sub '${VPCStackName}-PublicSubnet2'
+            - !Ref 'AWS::NoValue'
+        EndpointConfigPrivate: !Ref EnablePrivateEndpoint
+        EndpointConfigPublic: !Ref EnablePublicEndpoint
+        PublicAccessCidrs: !If [EnablePublicAccess, !Ref PublicAccessCIDRs, !Ref 'AWS::NoValue']
+      EncryptionConfig:
+        - Resources: [secrets]
+          Provider:
+            KeyArn: !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/eks'
+      Logging:
+        ClusterLogging:
+          EnabledTypes:
+            - Type: api
+            - Type: audit
+            - Type: authenticator
+            - Type: controllerManager
+            - Type: scheduler
+      Tags:
+        Name: !Sub '${ClusterName}-${EnvironmentName}'
+        Environment: !Ref EnvironmentName
+        ManagedBy: CloudFormation
+
+  # OIDC Identity Provider
+  OIDCIdentityProvider:
+    Type: AWS::EKS::IdentityProviderConfig
+    Properties:
+      ClusterName: !Ref EKSCluster
+      Type: oidc
+      Oidc:
+        IdentityProviderConfigName: !Sub '${ClusterName}-${EnvironmentName}-oidc'
+        IssuerUrl: !GetAtt EKSCluster.OpenIdConnectIssuerUrl
+        ClientId: sts.amazonaws.com
+        GroupsClaim: groups
+        UsernameClaim: sub
+
+  # Launch Template for System Node Group
+  SystemNodeLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub '${ClusterName}-${EnvironmentName}-system-nodes'
+      LaunchTemplateData:
+        InstanceType: !Ref SystemNodeInstanceType
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${VPCStackName}-EKSNodeSecurityGroup'
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            /etc/eks/bootstrap.sh ${EKSCluster}
+
+            # Install CloudWatch agent
+            yum update -y
+            yum install -y amazon-cloudwatch-agent
+
+            # Configure container runtime optimization for system workloads
+            echo 'net.core.somaxconn = 32768' >> /etc/sysctl.conf
+            echo 'vm.max_map_count = 262144' >> /etc/sysctl.conf
+            sysctl -p
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub '${ClusterName}-${EnvironmentName}-system-node'
+              - Key: Environment
+                Value: !Ref EnvironmentName
+              - Key: kubernetes.io/cluster/!Sub '${ClusterName}-${EnvironmentName}'
+                Value: owned
+              - Key: k8s.io/cluster-autoscaler/enabled
+                Value: 'true'
+              - Key: k8s.io/cluster-autoscaler/!Sub '${ClusterName}-${EnvironmentName}'
+                Value: owned
+              - Key: NodeGroup
+                Value: system
+          - ResourceType: volume
+            Tags:
+              - Key: Name
+                Value: !Sub '${ClusterName}-${EnvironmentName}-system-node-volume'
+              - Key: Environment
+                Value: !Ref EnvironmentName
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              VolumeSize: 50
+              VolumeType: gp3
+              DeleteOnTermination: true
+              Encrypted: true
+
+  # System Node Group
+  SystemNodeGroup:
+    Type: AWS::EKS::Nodegroup
+    DependsOn: EKSCluster
+    Properties:
+      NodegroupName: !Sub '${ClusterName}-${EnvironmentName}-system'
+      ClusterName: !Ref EKSCluster
+      NodeRole:
+        Fn::ImportValue: !Sub '${IAMStackName}-EKSNodeInstanceRoleArn'
+      Subnets:
+        - Fn::ImportValue: !Sub '${VPCStackName}-PrivateSubnet1'
+        - Fn::ImportValue: !Sub '${VPCStackName}-PrivateSubnet2'
+      LaunchTemplate:
+        Id: !Ref SystemNodeLaunchTemplate
+        Version: !GetAtt SystemNodeLaunchTemplate.LatestVersionNumber
+      ScalingConfig:
+        MinSize: !Ref SystemNodeMinSize
+        MaxSize: !Ref SystemNodeMaxSize
+        DesiredSize: !Ref SystemNodeDesiredSize
+      UpdateConfig:
+        MaxUnavailable: 1
+      AmiType: AL2_x86_64
+      CapacityType: ON_DEMAND
+      InstanceTypes:
+        - !Ref SystemNodeInstanceType
+      Taints:
+        - Key: CriticalAddonsOnly
+          Value: 'true'
+          Effect: NO_SCHEDULE
+      Labels:
+        nodegroup-type: system
+        node.kubernetes.io/purpose: system
+      Tags:
+        Name: !Sub '${ClusterName}-${EnvironmentName}-system-nodegroup'
+        Environment: !Ref EnvironmentName
+        kubernetes.io/cluster/!Sub '${ClusterName}-${EnvironmentName}': owned
+        k8s.io/cluster-autoscaler/enabled: 'true'
+        k8s.io/cluster-autoscaler/!Sub '${ClusterName}-${EnvironmentName}': owned
+
+  # Launch Template for User Node Group
+  UserNodeLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub '${ClusterName}-${EnvironmentName}-user-nodes'
+      LaunchTemplateData:
+        InstanceType: !Ref UserNodeInstanceType
+        SecurityGroupIds:
+          - Fn::ImportValue: !Sub '${VPCStackName}-EKSNodeSecurityGroup'
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            /etc/eks/bootstrap.sh ${EKSCluster}
+
+            # Install CloudWatch agent
+            yum update -y
+            yum install -y amazon-cloudwatch-agent
+
+            # Configure container runtime optimization for application workloads
+            echo 'net.core.somaxconn = 65536' >> /etc/sysctl.conf
+            echo 'vm.max_map_count = 262144' >> /etc/sysctl.conf
+            echo 'fs.file-max = 1000000' >> /etc/sysctl.conf
+            sysctl -p
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub '${ClusterName}-${EnvironmentName}-user-node'
+              - Key: Environment
+                Value: !Ref EnvironmentName
+              - Key: kubernetes.io/cluster/!Sub '${ClusterName}-${EnvironmentName}'
+                Value: owned
+              - Key: k8s.io/cluster-autoscaler/enabled
+                Value: 'true'
+              - Key: k8s.io/cluster-autoscaler/!Sub '${ClusterName}-${EnvironmentName}'
+                Value: owned
+              - Key: NodeGroup
+                Value: user
+          - ResourceType: volume
+            Tags:
+              - Key: Name
+                Value: !Sub '${ClusterName}-${EnvironmentName}-user-node-volume'
+              - Key: Environment
+                Value: !Ref EnvironmentName
+        BlockDeviceMappings:
+          - DeviceName: /dev/xvda
+            Ebs:
+              VolumeSize: 100
+              VolumeType: gp3
+              DeleteOnTermination: true
+              Encrypted: true
+
+  # User Node Group
+  UserNodeGroup:
+    Type: AWS::EKS::Nodegroup
+    DependsOn: [EKSCluster, SystemNodeGroup]
+    Properties:
+      NodegroupName: !Sub '${ClusterName}-${EnvironmentName}-user'
+      ClusterName: !Ref EKSCluster
+      NodeRole:
+        Fn::ImportValue: !Sub '${IAMStackName}-EKSNodeInstanceRoleArn'
+      Subnets:
+        - Fn::ImportValue: !Sub '${VPCStackName}-PrivateSubnet1'
+        - Fn::ImportValue: !Sub '${VPCStackName}-PrivateSubnet2'
+      LaunchTemplate:
+        Id: !Ref UserNodeLaunchTemplate
+        Version: !GetAtt UserNodeLaunchTemplate.LatestVersionNumber
+      ScalingConfig:
+        MinSize: !Ref UserNodeMinSize
+        MaxSize: !Ref UserNodeMaxSize
+        DesiredSize: !Ref UserNodeDesiredSize
+      UpdateConfig:
+        MaxUnavailablePercentage: 25
+      AmiType: AL2_x86_64
+      CapacityType: ON_DEMAND
+      InstanceTypes:
+        - !Ref UserNodeInstanceType
+      Labels:
+        nodegroup-type: user
+        node.kubernetes.io/purpose: application
+      Tags:
+        Name: !Sub '${ClusterName}-${EnvironmentName}-user-nodegroup'
+        Environment: !Ref EnvironmentName
+        kubernetes.io/cluster/!Sub '${ClusterName}-${EnvironmentName}': owned
+        k8s.io/cluster-autoscaler/enabled: 'true'
+        k8s.io/cluster-autoscaler/!Sub '${ClusterName}-${EnvironmentName}': owned
+
+  # EKS Add-ons
+  CoreDNSAddon:
+    Type: AWS::EKS::Addon
+    DependsOn: [SystemNodeGroup]
+    Properties:
+      ClusterName: !Ref EKSCluster
+      AddonName: coredns
+      AddonVersion: latest
+      ResolveConflicts: OVERWRITE
+      Tags:
+        Name: !Sub '${ClusterName}-${EnvironmentName}-coredns'
+        Environment: !Ref EnvironmentName
+
+  KubeProxyAddon:
+    Type: AWS::EKS::Addon
+    DependsOn: [SystemNodeGroup]
+    Properties:
+      ClusterName: !Ref EKSCluster
+      AddonName: kube-proxy
+      AddonVersion: latest
+      ResolveConflicts: OVERWRITE
+      Tags:
+        Name: !Sub '${ClusterName}-${EnvironmentName}-kube-proxy'
+        Environment: !Ref EnvironmentName
+
+  VPCCNIAddon:
+    Type: AWS::EKS::Addon
+    DependsOn: [SystemNodeGroup]
+    Properties:
+      ClusterName: !Ref EKSCluster
+      AddonName: vpc-cni
+      AddonVersion: latest
+      ResolveConflicts: OVERWRITE
+      ConfigurationValues: |
+        {
+          "env": {
+            "ENABLE_POD_ENI": "true",
+            "ENABLE_PREFIX_DELEGATION": "true",
+            "WARM_PREFIX_TARGET": "1"
+          }
+        }
+      Tags:
+        Name: !Sub '${ClusterName}-${EnvironmentName}-vpc-cni'
+        Environment: !Ref EnvironmentName
+
+  EBSCSIDriverAddon:
+    Type: AWS::EKS::Addon
+    DependsOn: [SystemNodeGroup]
+    Properties:
+      ClusterName: !Ref EKSCluster
+      AddonName: aws-ebs-csi-driver
+      AddonVersion: latest
+      ResolveConflicts: OVERWRITE
+      ServiceAccountRoleArn:
+        Fn::ImportValue: !Sub '${IAMStackName}-EBSCSIDriverRoleArn'
+      Tags:
+        Name: !Sub '${ClusterName}-${EnvironmentName}-ebs-csi-driver'
+        Environment: !Ref EnvironmentName
+
+  # CloudWatch Container Insights
+  ContainerInsightsAddon:
+    Type: AWS::EKS::Addon
+    DependsOn: [UserNodeGroup]
+    Properties:
+      ClusterName: !Ref EKSCluster
+      AddonName: amazon-cloudwatch-observability
+      AddonVersion: latest
+      ResolveConflicts: OVERWRITE
+      ServiceAccountRoleArn:
+        Fn::ImportValue: !Sub '${IAMStackName}-CloudWatchContainerInsightsRoleArn'
+      Tags:
+        Name: !Sub '${ClusterName}-${EnvironmentName}-cloudwatch-observability'
+        Environment: !Ref EnvironmentName
+
+Outputs:
+  ClusterName:
+    Description: EKS cluster name
+    Value: !Ref EKSCluster
+    Export:
+      Name: !Sub '${AWS::StackName}-ClusterName'
+
+  ClusterArn:
+    Description: EKS cluster ARN
+    Value: !GetAtt EKSCluster.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ClusterArn'
+
+  ClusterEndpoint:
+    Description: EKS cluster endpoint
+    Value: !GetAtt EKSCluster.Endpoint
+    Export:
+      Name: !Sub '${AWS::StackName}-ClusterEndpoint'
+
+  ClusterSecurityGroupId:
+    Description: EKS cluster security group ID
+    Value: !GetAtt EKSCluster.ClusterSecurityGroupId
+    Export:
+      Name: !Sub '${AWS::StackName}-ClusterSecurityGroupId'
+
+  OIDCIssuerURL:
+    Description: OIDC issuer URL
+    Value: !GetAtt EKSCluster.OpenIdConnectIssuerUrl
+    Export:
+      Name: !Sub '${AWS::StackName}-OIDCIssuerURL'
+
+  SystemNodeGroupName:
+    Description: System node group name
+    Value: !Ref SystemNodeGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-SystemNodeGroupName'
+
+  UserNodeGroupName:
+    Description: User node group name
+    Value: !Ref UserNodeGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-UserNodeGroupName'
+
+  ClusterVersion:
+    Description: EKS cluster Kubernetes version
+    Value: !Ref KubernetesVersion
+    Export:
+      Name: !Sub '${AWS::StackName}-ClusterVersion'
+
+  ClusterStatus:
+    Description: EKS cluster status
+    Value: !GetAtt EKSCluster.Status
+    Export:
+      Name: !Sub '${AWS::StackName}-ClusterStatus'
