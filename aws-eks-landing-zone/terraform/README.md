@@ -1,6 +1,6 @@
 # AWS EKS Landing Zone - Terraform Implementation
 
-This directory contains Terraform configuration for deploying a production-ready, secure AWS EKS landing zone equivalent to the Azure AKS Landing Zone using Azure Verified Modules.
+This directory contains Terraform configuration for deploying a production-ready, secure AWS EKS landing zone using community best practices and terraform-aws-modules.
 
 ## Architecture Overview
 

@@ -1,6 +1,6 @@
 # AWS EKS Landing Zone - CloudFormation Implementation
 
-This directory contains CloudFormation templates for deploying a production-ready, secure AWS EKS landing zone equivalent to the Azure AKS Landing Zone using Azure Verified Modules.
+This directory contains CloudFormation templates for deploying a production-ready, secure AWS EKS landing zone using AWS native infrastructure as code.
 
 ## Architecture Overview
 

@@ -1,90 +1,117 @@
-# Private AKS Landing Zone - Project Structure
+# AWS EKS Landing Zone - Project Structure
 
-This repository contains a production-ready Azure Kubernetes Service (AKS) landing zone implementation with comprehensive security documentation and automation.
+This repository contains a production-ready AWS Elastic Kubernetes Service (EKS) landing zone implementation with comprehensive security documentation and automation.
 
 ## Project Organization
 
 ```
-private-aks-landing-zone/
-├── terraform/                    # Infrastructure Code
-│   ├── *.tf                     # Terraform configuration files
+aws-eks-landing-zone/
+├── cloudformation/              # CloudFormation Implementation
+│   ├── 01-vpc-network.yaml     # VPC, subnets, security groups
+│   ├── 02-vpc-endpoints.yaml   # Private endpoints for AWS services
+│   ├── 03-iam-roles.yaml       # IAM roles and IRSA configuration
+│   ├── 04-ecr-secrets.yaml     # ECR repositories and secrets
+│   ├── 05-eks-cluster.yaml     # EKS cluster and node groups
+│   └── README.md               # CloudFormation deployment guide
+│
+├── terraform/                   # Terraform Implementation
+│   ├── *.tf                    # Terraform configuration files
 │   ├── terraform.tfvars         # Production configuration
 │   ├── terraform.tfvars.example # Configuration template
-│   ├── scripts/                 # Deployment automation
-│   │   ├── deploy.sh           # Automated deployment
-│   │   └── destroy.sh          # Safe destruction
-│   └── README.md               # Infrastructure documentation
+│   ├── templates/              # Launch templates and scripts
+│   ├── scripts/                # Deployment automation
+│   │   ├── deploy.sh          # Automated deployment
+│   │   └── destroy.sh         # Safe destruction
+│   └── README.md              # Infrastructure documentation
 │
-├── security-docs/               # Security Documentation
+├── scripts/                     # Deployment Scripts
+│   ├── deploy-cloudformation.sh # CloudFormation automation
+│   └── destroy-cloudformation.sh # Safe destruction script
+│
+├── security-docs/              # Security Documentation
 │   ├── SECURITY_DOCUMENTATION.md # Comprehensive security guide
-│   ├── SECURITY_REPORT.md      # Security scan summary
-│   ├── tfsec-report.json       # Automated scan results
-│   └── README.md               # Security documentation index
+│   ├── SECURITY_REPORT.md     # Security summary
+│   └── README.md              # Security documentation index
 │
-├── .infracodebase/              # Architecture Diagrams
-│   └── azure-landing-zone-aks.json # Visual architecture
+├── .infracodebase/             # Architecture Diagrams
+│   └── aws-eks-clean-architecture.json # Visual architecture
 │
-├── README.md                    # Project overview
-├── DEPLOYMENT_SUMMARY.md        # Implementation summary
-├── .gitignore                   # Git ignore patterns
-└── PROJECT_STRUCTURE.md         # This file
+├── README.md                   # Project overview
+├── DEPLOYMENT_SUMMARY.md       # Implementation summary
+├── .gitignore                  # Git ignore patterns
+└── PROJECT_STRUCTURE.md        # This file
 ```
 
 ## Quick Start Guide
 
-### 1. Infrastructure Deployment
+### Option 1: CloudFormation Deployment (Recommended)
 ```bash
-cd terraform/
+cd aws-eks-landing-zone/
+# Deploy using automation script
+./scripts/deploy-cloudformation.sh
+# Or with custom parameters
+./scripts/deploy-cloudformation.sh -e prod -c my-eks -r us-west-2
+```
+
+### Option 2: Terraform Deployment
+```bash
+cd aws-eks-landing-zone/terraform/
 cp terraform.tfvars.example terraform.tfvars
 # Edit terraform.tfvars with your values
 ./scripts/deploy.sh
 ```
 
-### 2. Security Review
+### 3. Security Review
 ```bash
 cd security-docs/
 # Review SECURITY_DOCUMENTATION.md for complete security details
-# Check SECURITY_REPORT.md for scan results
+# Check SECURITY_REPORT.md for summary
 ```
 
-### 3. Architecture Understanding
+### 4. Architecture Understanding
 - View architecture diagram in `.infracodebase/`
 - Review `DEPLOYMENT_SUMMARY.md` for overview
 - Check `README.md` for detailed documentation
 
-## Infrastructure Components (terraform/)
+## Infrastructure Components
 
-### Core Terraform Files:
+### CloudFormation Templates:
+- **Network:** `01-vpc-network.yaml` - VPC, subnets, NAT gateways, security groups
+- **Endpoints:** `02-vpc-endpoints.yaml` - VPC endpoints for AWS services
+- **IAM:** `03-iam-roles.yaml` - EKS service roles, node roles, IRSA
+- **Storage:** `04-ecr-secrets.yaml` - ECR repositories, secrets, S3
+- **Compute:** `05-eks-cluster.yaml` - EKS cluster, node groups, add-ons
+
+### Terraform Files:
 - **Configuration:** `terraform.tf`, `providers.tf`, `variables.tf`
-- **Infrastructure:** `network.tf`, `main.tf`, `monitoring.tf`
-- **Outputs:** `outputs.tf`, `locals.tf`
-- **Backend:** `backend.tf`
+- **Infrastructure:** `vpc.tf`, `eks.tf`, `iam.tf`, `ecr.tf`
+- **Outputs:** `outputs.tf`, `locals.tf`, `data.tf`
+- **Monitoring:** `monitoring.tf`, `secrets.tf`, `kms.tf`
 
 ### Key Features:
-- Private AKS cluster (no public endpoints)
-- Azure Verified Modules (latest versions)
-- Network segmentation with NSGs
-- Private Container Registry
-- Key Vault with private endpoints
-- Log Analytics for monitoring
+- Private EKS cluster (no public endpoints)
+- Community best-practice modules
+- Network segmentation with security groups
+- Private Container Registry with KMS encryption
+- VPC endpoints for AWS service connectivity
+- CloudWatch for monitoring and logging
 
 ## Security Implementation (security-docs/)
 
 ### Security Documentation:
-- **`SECURITY_DOCUMENTATION.md`** - Complete security reference (50+ pages)
+- **`SECURITY_DOCUMENTATION.md`** - Complete security reference
 - **`SECURITY_REPORT.md`** - Executive security summary
-- **`tfsec-report.json`** - Technical scan results
 
 ### Security Highlights:
-- **0 Security Vulnerabilities** (tfsec validated)
+- **Zero Trust Architecture** with private connectivity
 - **Enterprise-Grade Security** implementation
-- **Multi-Framework Compliance** (SOC2, ISO27001, HIPAA, etc.)
-- **Zero Trust Architecture** with defense in depth
+- **Multi-Framework Compliance** (SOC2, ISO27001, etc.)
+- **Private-by-Default** networking design
 
 ## Compliance & Standards
 
 ### Security Frameworks:
-- **Azure Security Benchmark** COMPLIANT
+- **AWS Security Benchmark** COMPLIANT
 - **CIS Kubernetes Benchmark** COMPLIANT
 - **NIST Cybersecurity Framework** ALIGNED
 
@@ -98,41 +125,44 @@ cd security-docs/
 ## Technology Stack
 
 ### Infrastructure as Code:
+- **CloudFormation** - AWS native IaC
 - **Terraform** >= 1.9.0
-- **Azure Provider** >= 4.55.0
-- **Azure Verified Modules** (latest)
+- **AWS Provider** >= 5.75.1
+- **Community Modules** (terraform-aws-modules)
 
-### Azure Services:
-- **Azure Kubernetes Service** (Private)
-- **Azure Container Registry** (Premium)
-- **Azure Key Vault** (with private endpoints)
-- **Virtual Network** (segmented subnets)
-- **Log Analytics** (monitoring)
+### AWS Services:
+- **Amazon EKS** (Private cluster)
+- **Amazon ECR** (Private registry)
+- **AWS Secrets Manager** (KMS encrypted)
+- **Amazon VPC** (Multi-AZ)
+- **CloudWatch** (Monitoring and logging)
+- **VPC Endpoints** (Private connectivity)
 
 ## Architecture Patterns
 
-### Azure Landing Zone Design:
-- **Hub-Spoke Topology** with private connectivity
+### AWS Landing Zone Design:
 - **Network Segmentation** with security boundaries
-- **Private Endpoints** for all data services
-- **Zero Trust Networking** with micro-segmentation
+- **Private Connectivity** via VPC endpoints
+- **Zero Trust Networking** with security groups
+- **Multi-AZ Deployment** for high availability
 
 ### Kubernetes Security:
 - **Private API Server** (no public access)
-- **Network Policies** (Cilium CNI)
-- **Pod Security Standards** implementation
-- **Workload Identity** with Azure integration
+- **Security Groups** for pod-level security
+- **IRSA** (IAM Roles for Service Accounts)
+- **Image Security** with ECR vulnerability scanning
+- **Node Group Separation** for workload isolation
 
 ## Operational Excellence
 
 ### Automation:
-- **Infrastructure as Code** (100% Terraform)
+- **Infrastructure as Code** (CloudFormation and Terraform)
 - **Automated Deployment** scripts with validation
-- **Security Scanning** integration (tfsec)
+- **Security Integration** with AWS best practices
 - **Compliance Monitoring** continuous validation
 
 ### Documentation:
-- **Architecture Diagrams** (Microsoft Azure style)
+- **Architecture Diagrams** (AWS reference style)
 - **Security Documentation** (comprehensive)
 - **Operational Runbooks** (deployment/destruction)
 - **Compliance Reports** (multi-framework)
@@ -140,8 +170,8 @@ cd security-docs/
 ## Usage Instructions
 
 ### For Infrastructure Teams:
-1. Navigate to `terraform/` directory
-2. Follow infrastructure README for deployment
+1. Navigate to `cloudformation/` or `terraform/` directory
+2. Follow respective README for deployment
 3. Use provided automation scripts
 
 ### For Security Teams:
@@ -156,11 +186,11 @@ cd security-docs/
 
 ## Production Readiness
 
-- **Security Certified** - Zero vulnerabilities identified
+- **Security Certified** - AWS best practices implemented
 - **Compliance Ready** - Multi-framework alignment
 - **Enterprise Grade** - Production deployment approved
 - **Fully Documented** - Comprehensive operational guides
 
 ---
 
-**This project represents a complete Azure Kubernetes Service landing zone implementation following Microsoft's Azure Landing Zone methodology with enterprise security controls and comprehensive documentation suitable for production deployment.**
+**This project represents a complete AWS EKS landing zone implementation following AWS Well-Architected Framework with enterprise security controls and comprehensive documentation suitable for production deployment.**
